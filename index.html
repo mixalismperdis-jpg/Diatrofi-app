@@ -247,7 +247,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v27",at:""};
+const APP_VER={v:"v28",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -913,39 +913,37 @@ function editFood(id){
 
 function editMeal(id){
   const m=id?JSON.parse(JSON.stringify(meal(id))):{id:uid(),name:"",kcal:0,p:0,c:0,f:0,s:[],n:1,parts:[],ing:null};
-  let mode=m.parts&&m.parts.length?"parts":id?"fixed":"parts";if(!m.parts)m.parts=[];if(!m.ing)m.ing=[];
-  const list=()=>mode==="parts"?m.parts:m.ing;
+  // παλιές συνταγές με σταθερές τιμές: κρατάνε τις τιμές τους μέχρι να μπουν υλικά
+  const legacy=!!id&&!(m.parts&&m.parts.length);if(!m.parts)m.parts=[];
+  const fixed=()=>legacy&&!m.parts.length,list=()=>m.parts;
   // μονάδα εμφάνισης ανά υλικό (μόνο στην οθόνη, η αποθηκευμένη ποσότητα δεν αλλάζει)
   const PU=new WeakMap(),puOf=pt=>{const f=food(pt.food);if(!f)return"g";if(!hasSv(f))return f.u==="g"?"g":"sv";
     if(!PU.has(pt)){const n=f.u==="g"?pt.qty/svG(f):1;PU.set(pt,n>0&&Math.abs(n*2-Math.round(n*2))<.02?"sv":"g")}return PU.get(pt)};
   const draw=()=>{
-    const n=mode==="parts"?mealNutr({parts:m.parts,n:m.n}):{k:+m.kcal||0,p:+m.p||0,c:+m.c||0,f:+m.f||0};
+    const n=fixed()?{k:+m.kcal||0,p:+m.p||0,c:+m.c||0,f:+m.f||0}:mealNutr({parts:m.parts,n:m.n});
     const rows=list();
     sheet(`<div class="row between"><h2>${id?"Επεξεργασία συνταγής":"Νέα συνταγή"}</h2><button class="btn ghost" id="x">Κλείσιμο</button></div>
      <label class="field"><span>Όνομα / περιγραφή</span><input id="mn" value="${esc(m.name)}"></label>
      <label class="field"><span>Βγάζει μερίδες</span><input id="mserv" type="number" inputmode="numeric" min="1" step="1" value="${servOf(m)}"></label>
-     <div class="seg"><button id="mpar" class="${mode==="parts"?"on":""}">Από υλικά</button><button id="mfix" class="${mode==="fixed"?"on":""}">Σταθερές τιμές</button></div>
-     ${mode==="fixed"?`<span class="label">Τιμές ανά μερίδα</span><div class="form">${[["mk","Θερμίδες",m.kcal],["mp","Πρωτεΐνη",m.p],["mc","Υδατάνθρακες",m.c],["mf","Λιπαρά",m.f]].map(([i,l,v])=>`<label class="field"><span>${l}</span><input id="${i}" type="number" inputmode="decimal" value="${v??0}"></label>`).join("")}</div>`:""}
-     <span class="label">${mode==="parts"?"Υλικά (για όλη τη συνταγή)":"Υλικά για τη λίστα ψωνιών (για όλη τη συνταγή)"}</span>
+     ${fixed()?'<p class="note">Παλιά συνταγή με σταθερές τιμές. Κρατάει τις τιμές της· μόλις προσθέσεις υλικά, υπολογίζεται από αυτά.</p>':""}
+     <span class="label">Υλικά (για όλη τη συνταγή)</span>
      <div class="opts">${rows.map((pt,i)=>{const f=food(pt.food),sv=puOf(pt)==="sv";return `<div class="pitem"><span>${esc(f?f.name:"?")}</span><input type="number" inputmode="decimal" id="pq-${i}" data-pq="${i}" value="${!f?pt.qty:sv?toSv(f,pt.qty):toG(f,pt.qty)}">${hasSv(f)?`<button class="btn sm" data-pu="${i}" title="Αλλαγή μονάδας">${sv?esc(plur(svName(f),2)):"γρ."}</button>`:`<span class="muted small">${!f||f.u==="g"?"γρ.":esc(plur(svName(f),2))}</span>`}<button class="btn sm danger" data-pr="${i}" aria-label="Αφαίρεση">×</button></div>`}).join("")||'<span class="note">Κανένα υλικό ακόμα.</span>'}</div>
      <select id="addPart"><option value="">+ Πρόσθεσε υλικό…</option>${[...S.lib.foods].sort(byName).map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join("")}</select>
      <div class="tot" id="mtot">${servOf(m)>1?"Ανά μερίδα":"Σύνολο"}: ${nv(n)}</div>
      <div class="field"><span>Ταιριάζει για</span><div class="row">${SLOTS.map((s,i)=>`<label class="chip"><input type="checkbox" id="ms-${i}" data-ms="${i}" ${m.s?.includes(i)?"checked":""}> ${s.n} ${s.t}</label>`).join("")}</div></div>
      <div class="row"><button class="btn primary" id="ok">Αποθήκευση</button>${id?'<button class="btn danger" id="del">Διαγραφή</button>':""}</div><div id="delc"></div>`,bind)};
-  const grab=()=>{m.name=byId("mn").value;m.n=Math.max(1,Math.round(+byId("mserv").value||1));if(byId("mk")){m.kcal=num(byId("mk").value);m.p=num(byId("mp").value);m.c=num(byId("mc").value);m.f=num(byId("mf").value)}
+  const grab=()=>{m.name=byId("mn").value;m.n=Math.max(1,Math.round(+byId("mserv").value||1));
     document.querySelectorAll("[data-pq]").forEach(i=>{const pt=list()[+i.dataset.pq],f=food(pt.food),v=num(i.value);pt.qty=!f?v:puOf(pt)==="sv"?fromSv(f,v):fromG(f,v)});
     m.s=[...document.querySelectorAll("[data-ms]")].filter(c=>c.checked).map(c=>+c.dataset.ms)};
   const bind=()=>{byId("x").onclick=closeSheet;
-    byId("mserv").oninput=()=>{grab();if(mode==="parts"){const n=mealNutr({parts:m.parts,n:m.n});byId("mtot").innerHTML=(m.n>1?"Ανά μερίδα":"Σύνολο")+": "+nv(n)}};
-    byId("mfix").onclick=()=>{grab();if(mode==="parts"&&m.parts.length){const n=mealNutr({parts:m.parts,n:m.n});Object.assign(m,{kcal:r1(n.k),p:r1(n.p),c:r1(n.c),f:r1(n.f)});m.ing=m.parts.map(x=>({...x}))}mode="fixed";draw()};
-    byId("mpar").onclick=()=>{grab();if(mode==="fixed"&&!m.parts.length&&m.ing.length)m.parts=m.ing.map(x=>({...x}));mode="parts";draw()};
-    ["mk","mp","mc","mf"].forEach(k=>{const e=byId(k);if(e)e.onchange=()=>{grab();draw()}});
+    byId("mserv").oninput=()=>{grab();if(!fixed()){const n=mealNutr({parts:m.parts,n:m.n});byId("mtot").innerHTML=(m.n>1?"Ανά μερίδα":"Σύνολο")+": "+nv(n)}};
     document.querySelectorAll("[data-pq]").forEach(i=>i.onchange=()=>{grab();draw()});
     document.querySelectorAll("[data-pr]").forEach(b=>b.onclick=()=>{grab();list().splice(+b.dataset.pr,1);draw()});
     document.querySelectorAll("[data-pu]").forEach(b=>b.onclick=()=>{grab();const pt=list()[+b.dataset.pu];PU.set(pt,puOf(pt)==="sv"?"g":"sv");draw()});
     byId("addPart").onchange=e=>{grab();const f=food(e.target.value);if(f){const pt={food:f.id,qty:f.u==="g"?(hasSv(f)?svG(f):100):1};if(hasSv(f))PU.set(pt,"sv");list().push(pt);draw()}};
     byId("ok").onclick=()=>{grab();if(!m.name.trim()){toast("Δώσε όνομα στη συνταγή");return}
-      const fin={id:m.id,name:m.name.trim(),s:m.s,parts:mode==="parts"&&m.parts.length?m.parts:null,ing:mode==="fixed"&&m.ing.length?m.ing:null,n:m.n>1?m.n:undefined,kcal:m.kcal,p:m.p,c:m.c,f:m.f};
+      if(!m.parts.length&&!legacy){toast("Πρόσθεσε τουλάχιστον ένα υλικό");return}
+      const fin={id:m.id,name:m.name.trim(),s:m.s,parts:m.parts.length?m.parts:null,ing:fixed()&&m.ing&&m.ing.length?m.ing:null,n:m.n>1?m.n:undefined,kcal:m.kcal,p:m.p,c:m.c,f:m.f};
       if(fin.parts){const n=mealNutr(fin);Object.assign(fin,{kcal:r1(n.k),p:r1(n.p),c:r1(n.c),f:r1(n.f)})}
       if(id){const ix=S.lib.meals.findIndex(x=>x.id===id);S.lib.meals[ix]=fin}else S.lib.meals.push(fin);saveLib();closeSheet();render();toast("Αποθηκεύτηκε")};
     const d=byId("del");if(d)d.onclick=()=>{byId("delc").innerHTML=`<div class="row"><span class="small">Θα φύγει από το πρόγραμμα και από σήμερα και μετά. Οι περασμένες μέρες κρατάνε τα νούμερά τους. Σίγουρα;</span><button class="btn danger sm" id="dy">Ναι, διαγραφή</button></div>`;
