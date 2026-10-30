@@ -209,7 +209,10 @@ nav.tabs button.on{color:var(--ink)}
 .gtitle:focus{border-color:var(--line);background:var(--surface)}
 .card.gex{gap:5px;padding:8px 10px}
 .gx-h{display:flex;gap:6px;align-items:center}
-.gx-n{flex:1;font-weight:700;font-size:14.5px;border-color:transparent;background:transparent;padding:4px 2px}
+.gx-n{flex:1;min-width:0;font:inherit;font-weight:700;font-size:14.5px;line-height:1.3;color:inherit;border:1px solid transparent;border-radius:10px;background:transparent;padding:4px 2px;resize:none;overflow:hidden;display:block}
+.gx-n:focus{outline:0}
+.gx-g{flex:none;align-self:stretch;display:flex;align-items:center;padding:0 2px;margin-left:-4px;color:var(--muted);touch-action:none;cursor:grab}
+.card.gex.drag{position:relative;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:.95}
 .gx-n:focus{border-color:var(--line)}
 .gx-h select{width:auto;padding:4px 6px;font-size:12px;color:var(--muted)}
 .gprev{font-size:12px;color:var(--muted)}
@@ -247,7 +250,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v28",at:""};
+const APP_VER={v:"v29",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -1239,7 +1242,7 @@ function renderGymEdit(){
     <input class="gtitle" id="gTitle" value="${esc(g.title)}" placeholder="Τίτλος, π.χ. Legs & Abs">`;
   g.ex.forEach((e,i)=>{const m=e.m||"w",pv=prevEx(exKey(e.n),d),ps=pv?pv.e.sets:[],st=exStat(e);
     const best=exHistory(exKey(e.n)).filter(o=>o.d<d).reduce((a,o)=>Math.max(a,o.st.cmp),0),pr=st&&best>0&&st.cmp>best+.01;
-    h+=`<section class="card gex"><div class="gx-h"><input class="gx-n" data-xn="${i}" value="${esc(e.n)}" aria-label="Όνομα άσκησης">
+    h+=`<section class="card gex" data-gi="${i}"><div class="gx-h"><span class="gx-g" data-xg="${i}" aria-label="Σύρε για αλλαγή σειράς" title="Σύρε για αλλαγή σειράς"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span><textarea class="gx-n" data-xn="${i}" rows="1" aria-label="Όνομα άσκησης">${esc(e.n)}</textarea>
       ${pr?`<span class="chip on">ρεκόρ</span>`:""}<select data-xm="${i}" aria-label="Τύπος">${[["w","Kg"],["bw","χωρίς βάρος"],["t","χρόνος"]].map(([v,l])=>`<option value="${v}" ${m===v?"selected":""}>${l}</option>`).join("")}</select>
       <button class="btn ghost sm" data-xdel="${i}" aria-label="Διαγραφή άσκησης" title="Διαγραφή άσκησης"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>
       ${pv?`<div class="gprev">Προηγ. ${fmtD(pv.d)}: ${esc(setsTxt(pv.e))}</div>`:""}`;
@@ -1260,7 +1263,24 @@ function renderGymEdit(){
   byId("gDate").onchange=e=>{const nd=e.target.value;if(!nd||nd===d)return;
     if(gymOn(nd)){toast("Υπάρχει ήδη προπόνηση στις "+fmtD(nd));e.target.value=d;return}
     S.gym[nd]={title:g.title,ex:g.ex};S.gym[d]={deleted:true};saveGym(nd);saveGym(d);S.gymOpen=nd;render();toast("Μεταφέρθηκε στις "+fmtD(nd))};
-  main.querySelectorAll("[data-xn]").forEach(el=>el.oninput=()=>{const v=el.value.trim();if(v){g.ex[+el.dataset.xn].n=v;sv()}});
+  const fit=el=>{el.style.height="auto";el.style.height=el.scrollHeight+"px"};
+  main.querySelectorAll("[data-xn]").forEach(el=>{fit(el);
+    el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.blur()}};
+    el.oninput=()=>{if(/\n/.test(el.value))el.value=el.value.replace(/\s*\n\s*/g," ");fit(el);const v=el.value.trim();if(v){g.ex[+el.dataset.xn].n=v;sv()}}});
+  // Αλλαγή σειράς: σύρσιμο από τη λαβή (δάχτυλο ή ποντίκι)
+  main.querySelectorAll("[data-xg]").forEach(hd=>hd.onpointerdown=ev=>{
+    if(ev.button>0)return;ev.preventDefault();
+    const card=hd.closest(".gex"),y0=ev.clientY,s0=scrollY,top0=card.offsetTop;let y=y0,raf=0;
+    card.classList.add("drag");try{hd.setPointerCapture(ev.pointerId)}catch(e){}
+    const place=()=>{const p=card.previousElementSibling,n=card.nextElementSibling;
+      if(p&&p.classList.contains("gex")){const r=p.getBoundingClientRect();if(y<r.top+r.height/2)card.parentNode.insertBefore(card,p)}
+      if(n&&n.classList.contains("gex")){const r=n.getBoundingClientRect();if(y>r.top+r.height/2)card.parentNode.insertBefore(n,card)}
+      card.style.transform=`translateY(${y-y0+scrollY-s0-(card.offsetTop-top0)}px)`};
+    const tick=()=>{const vh=innerHeight,sp=y<70?-8:y>vh-110?8:0;if(sp){scrollBy(0,sp);place()}raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick);
+    hd.onpointermove=e=>{y=e.clientY;place()};
+    hd.onpointerup=hd.onpointercancel=()=>{cancelAnimationFrame(raf);hd.onpointermove=hd.onpointerup=hd.onpointercancel=null;
+      const ord=[...main.querySelectorAll(".gex")].map(c=>+c.dataset.gi);card.classList.remove("drag");card.style.transform="";
+      if(ord.some((v,k)=>v!==k)){g.ex=ord.map(k=>g.ex[k]);sv()}render()}});
   main.querySelectorAll("[data-xm]").forEach(el=>el.oninput=()=>{g.ex[+el.dataset.xm].m=el.value;sv();render()});
   main.querySelectorAll("[data-xdel]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.xdel];if(e.sets.some(s=>s.r!=null||s.s!=null)&&!confirm("Διαγραφή της άσκησης «"+e.n+"»;"))return;g.ex.splice(+b.dataset.xdel,1);sv();render()});
   main.querySelectorAll("[data-sw]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sw);g.ex[i].sets[j].w=pnum(el.value);sv()});
