@@ -250,7 +250,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v30",at:""};
+const APP_VER={v:"v31",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -1273,14 +1273,17 @@ function renderGymEdit(){
     const card=hd.closest(".gex"),y0=ev.clientY,s0=scrollY,top0=card.offsetTop;let y=y0,raf=0;
     card.classList.add("drag");try{hd.setPointerCapture(ev.pointerId)}catch(e){}
     const place=()=>{const p=card.previousElementSibling,n=card.nextElementSibling;
-      if(p&&p.classList.contains("gex")){const r=p.getBoundingClientRect();if(y<r.top+r.height/2)card.parentNode.insertBefore(card,p)}
+      if(p&&p.classList.contains("gex")){const r=p.getBoundingClientRect();if(y<r.top+r.height/2)card.after(p)} // μετακινείται η άλλη κάρτα: αν μετακινηθεί η ίδια χάνεται το «πιάσιμο» του δαχτύλου
       if(n&&n.classList.contains("gex")){const r=n.getBoundingClientRect();if(y>r.top+r.height/2)card.parentNode.insertBefore(n,card)}
       card.style.transform=`translateY(${y-y0+scrollY-s0-(card.offsetTop-top0)}px)`};
-    const tick=()=>{const vh=innerHeight,sp=y<70?-8:y>vh-110?8:0;if(sp){scrollBy(0,sp);place()}raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick);
-    hd.onpointermove=e=>{y=e.clientY;place()};
-    hd.onpointerup=hd.onpointercancel=()=>{cancelAnimationFrame(raf);hd.onpointermove=hd.onpointerup=hd.onpointercancel=null;
+    const hb=(document.querySelector("header.top")?.getBoundingClientRect().bottom||0)+50,nt=(document.querySelector("nav.tabs")?.getBoundingClientRect().top||innerHeight)-50;
+    // Αυτόματη κύλιση όταν το δάχτυλο πλησιάζει την κεφαλίδα ή τις καρτέλες κάτω (και πάνω τους)
+    const tick=()=>{const sp=y<hb?-Math.min(18,3+(hb-y)/4):y>nt?Math.min(18,3+(y-nt)/4):0;if(sp){scrollBy(0,sp);place()}raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick);
+    const mv=e=>{if(e.pointerId===ev.pointerId){y=e.clientY;place()}},
+      end=e=>{if(e.pointerId!==ev.pointerId)return;cancelAnimationFrame(raf);removeEventListener("pointermove",mv);removeEventListener("pointerup",end);removeEventListener("pointercancel",end);
       const ord=[...main.querySelectorAll(".gex")].map(c=>+c.dataset.gi);card.classList.remove("drag");card.style.transform="";
-      if(ord.some((v,k)=>v!==k)){g.ex=ord.map(k=>g.ex[k]);sv()}render()}});
+      if(ord.some((v,k)=>v!==k)){g.ex=ord.map(k=>g.ex[k]);sv()}render()};
+    addEventListener("pointermove",mv);addEventListener("pointerup",end);addEventListener("pointercancel",end)});
   main.querySelectorAll("[data-xm]").forEach(el=>el.oninput=()=>{g.ex[+el.dataset.xm].m=el.value;sv();render()});
   main.querySelectorAll("[data-xdel]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.xdel];if(e.sets.some(s=>s.r!=null||s.s!=null)&&!confirm("Διαγραφή της άσκησης «"+e.n+"»;"))return;g.ex.splice(+b.dataset.xdel,1);sv();render()});
   main.querySelectorAll("[data-sw]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sw);g.ex[i].sets[j].w=pnum(el.value);sv()});
