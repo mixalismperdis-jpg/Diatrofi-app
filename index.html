@@ -209,7 +209,7 @@ nav.tabs button.on{color:var(--ink)}
 .gtitle:focus{border-color:var(--line);background:var(--surface)}
 .card.gex{gap:5px;padding:8px 10px}
 .gx-h{display:flex;gap:6px;align-items:center}
-.gx-n{flex:1;min-width:0;font:inherit;font-weight:700;font-size:14.5px;line-height:1.3;color:inherit;border:1px solid transparent;border-radius:10px;background:transparent;padding:4px 2px;resize:none;overflow:hidden;display:block}
+.gx-n{flex:1;min-width:0;touch-action:pan-y;overscroll-behavior:auto;font:inherit;font-weight:700;font-size:14.5px;line-height:1.3;color:inherit;border:1px solid transparent;border-radius:10px;background:transparent;padding:4px 2px;resize:none;overflow:hidden;display:block}
 .gx-n:focus{outline:0}
 .gx-g{flex:none;align-self:stretch;display:flex;align-items:center;padding:0 2px;margin-left:-4px;color:var(--muted);touch-action:none;cursor:grab}
 .card.gex.drag{position:relative;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:.95}
@@ -250,7 +250,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v29",at:""};
+const APP_VER={v:"v30",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -1263,7 +1263,7 @@ function renderGymEdit(){
   byId("gDate").onchange=e=>{const nd=e.target.value;if(!nd||nd===d)return;
     if(gymOn(nd)){toast("Υπάρχει ήδη προπόνηση στις "+fmtD(nd));e.target.value=d;return}
     S.gym[nd]={title:g.title,ex:g.ex};S.gym[d]={deleted:true};saveGym(nd);saveGym(d);S.gymOpen=nd;render();toast("Μεταφέρθηκε στις "+fmtD(nd))};
-  const fit=el=>{el.style.height="auto";el.style.height=el.scrollHeight+"px"};
+  const fit=el=>{el.style.height="auto";el.style.height=el.scrollHeight+el.offsetHeight-el.clientHeight+"px"}; // + περίγραμμα, αλλιώς το πεδίο κυλάει 2px και «τρώει» την κύλιση της σελίδας
   main.querySelectorAll("[data-xn]").forEach(el=>{fit(el);
     el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.blur()}};
     el.oninput=()=>{if(/\n/.test(el.value))el.value=el.value.replace(/\s*\n\s*/g," ");fit(el);const v=el.value.trim();if(v){g.ex[+el.dataset.xn].n=v;sv()}}});
