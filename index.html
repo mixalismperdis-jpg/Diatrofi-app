@@ -140,7 +140,7 @@ header.top .wrap{gap:6px}
 .list{display:flex;flex-direction:column}
 .li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line)}
 .li:last-child{border-bottom:0}
-.li .n{min-width:0;font-size:14px}
+.li .n{min-width:0;font-size:14px;overflow-wrap:anywhere}
 .li .v{font-size:12px;text-align:right;white-space:nowrap}
 .li .v b{color:var(--prot);font-weight:600}
 .tag{font-size:11px;color:var(--muted);font-weight:600;border:1px solid var(--line);border-radius:6px;padding:0 4px;white-space:nowrap}
@@ -188,6 +188,7 @@ nav.tabs button.on{color:var(--ink)}
 .sheet .preview{position:sticky;top:-16px;background:var(--bg);padding-block:6px;z-index:1;font-size:13px}
 .opt{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;width:100%}
 .opt:hover{border-color:var(--muted)}
+.opt>span:first-child{min-width:0;overflow-wrap:anywhere}
 .opt .v{font-size:12px;white-space:nowrap}
 .opt .v b{color:var(--prot);font-weight:600}
 .opts{display:flex;flex-direction:column;gap:6px}
