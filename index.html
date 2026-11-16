@@ -140,10 +140,13 @@ header.top .wrap{gap:6px}
 .list{display:flex;flex-direction:column}
 .li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line)}
 .li:last-child{border-bottom:0}
-.li .n{min-width:0;font-size:14px}
+.li .n{min-width:0;font-size:14px;overflow-wrap:anywhere}
 .li .v{font-size:12px;text-align:right;white-space:nowrap}
 .li .v b{color:var(--prot);font-weight:600}
-.est{font-size:11px;color:var(--muted);font-weight:600;border:1px solid var(--line);border-radius:6px;padding:0 4px;white-space:nowrap}
+.tag{font-size:11px;color:var(--muted);font-weight:600;border:1px solid var(--line);border-radius:6px;padding:0 4px;white-space:nowrap}
+.tag.est{border-style:dashed}
+.tag.bc{color:var(--ink)}
+.tag.ok{color:var(--ok);border-color:transparent;padding:0 2px}
 .shop{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line);font-size:14px}
 .shop:last-child{border-bottom:0}
 .shop.done .n{text-decoration:line-through;color:var(--muted)}
@@ -185,6 +188,7 @@ nav.tabs button.on{color:var(--ink)}
 .sheet .preview{position:sticky;top:-16px;background:var(--bg);padding-block:6px;z-index:1;font-size:13px}
 .opt{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;width:100%}
 .opt:hover{border-color:var(--muted)}
+.opt>span:first-child{min-width:0;overflow-wrap:anywhere}
 .opt .v{font-size:12px;white-space:nowrap}
 .opt .v b{color:var(--prot);font-weight:600}
 .opts{display:flex;flex-direction:column;gap:6px}
@@ -250,7 +254,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v31",at:""};
+const APP_VER={v:"v32",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -308,6 +312,8 @@ function foodNutr(f,q){const m=f.u==="g"?q/100:q;return{k:f.kcal*m,p:f.p*m,c:(f.
 const GRM=/\s*(\d+(?:[.,]\d+)?)\s*γρ\.?/;
 const svG=f=>{if(!f)return 0;if(+f.sg>0)return +f.sg;if(f.u!=="g"){const m=String(f.pn||"").match(GRM);if(m)return +m[1].replace(",",".")}return 0};
 const hasSv=f=>svG(f)>0;
+// Πηγή τιμών υλικού: barcode (συσκευασία), εκτίμηση (συνηθισμένες τιμές), ✓ (ελεγμένες από σένα)
+const srcTag=f=>!f?"":f.bc?' <span class="tag bc" title="Τιμές από barcode">barcode</span>':f.est?' <span class="tag est" title="Συνηθισμένες τιμές, όχι από τη συσκευασία">εκτίμηση</span>':' <span class="tag ok" title="Ελεγμένες τιμές">✓</span>';
 const svName=f=>f.u==="g"?(String(f.sn||"").trim()||"μερίδα"):(String(f.pn||"").replace(GRM,"").trim()||"τεμ.");
 const perSv=f=>f.u==="g"?svG(f):1, gPer=f=>f.u==="g"?1:svG(f);
 const toSv=(f,q)=>Math.round(q/perSv(f)*100)/100, toG=(f,q)=>r1(q*gPer(f));
@@ -688,7 +694,7 @@ function pickerHTML(slot,q){
   const fv=f=>`${MX(f.kcal,f.p,f.c??0,f.f??0)} <span class="muted">/${esc(unitTxt(f))}</span>${f.u==="g"&&hasSv(f)?` <span class="muted small">· ${esc(svInfo(f))}</span>`:""}`;
   const seg=`<div class="seg"><button id="ps-rec" class="${rec?"on":""}">Συνταγές (${meals.length})</button><button id="ps-ing" class="${rec?"":"on"}">Υλικά (${foods.length})</button></div>`;
   return seg+(rec?`<div class="opts">${meals.map(m=>`<button class="opt" data-pm="${m.id}"><span>${esc(m.name)}</span><span class="v">${mv(m)}</span></button>`).join("")||'<span class="note">Καμία συνταγή. Φτιάξε από την καρτέλα Τρόφιμα › Συνταγές.</span>'}</div>`
-  :`<div class="opts">${foods.map(f=>`<button class="opt" data-pf="${f.id}"><span>${esc(f.name)}${f.est?' <span class="est">εκτίμηση</span>':""}</span><span class="v">${fv(f)}</span></button>`).join("")||'<span class="note">Κανένα υλικό.</span>'}</div>`)}
+  :`<div class="opts">${foods.map(f=>`<button class="opt" data-pf="${f.id}"><span>${esc(f.name)}${srcTag(f)}</span><span class="v">${fv(f)}</span></button>`).join("")||'<span class="note">Κανένα υλικό.</span>'}</div>`)}
 
 function openAddSheet(slot,replaceId){
   const old=replaceId?TG.get().find(x=>x.id===replaceId):null, on=old?itemNutr(old):Z();
@@ -867,9 +873,9 @@ function renderFoods(){
   let h=`<div class="seg"><button id="fs-ing" class="${rec?"":"on"}">Υλικά (${S.lib.foods.length})</button><button id="fs-rec" class="${rec?"on":""}">Συνταγές (${S.lib.meals.length})</button></div>
   <input id="fq" placeholder="${rec?"Αναζήτηση συνταγής":"Αναζήτηση υλικού"}" value="${esc(S.foodQ)}" autocomplete="off">`;
   if(!rec)h+=`<section class="card" style="gap:4px"><div class="row between"><h3>Υλικά</h3><div class="row"><button class="btn sm" id="labelScan">Barcode</button><button class="btn sm primary" id="newFood">+ Νέο</button></div></div>
-  <div class="list">${CATS.map(c=>{const g=foods.filter(f=>(CATS.includes(f.cat)?f.cat:"Άλλα")===c);return g.length?`<span class="label" style="margin-top:8px">${esc(c)} (${g.length})</span>`+g.map(f=>`<div class="li"><span class="n">${esc(f.name)}${f.est?' <span class="est">εκτίμηση</span>':""}</span>
+  <div class="list">${CATS.map(c=>{const g=foods.filter(f=>(CATS.includes(f.cat)?f.cat:"Άλλα")===c);return g.length?`<span class="label" style="margin-top:8px">${esc(c)} (${g.length})</span>`+g.map(f=>`<div class="li"><span class="n">${esc(f.name)}${srcTag(f)}</span>
    <span class="v">${MX(f.kcal,f.p,f.c??0,f.f??0)}<br><span class="muted">ανά ${esc(unitTxt(f))}${f.u==="g"&&hasSv(f)?" · "+esc(svInfo(f)):""}</span></span><button class="btn sm" data-ef="${f.id}">Επεξ.</button></div>`).join(""):""}).join("")||'<span class="note">Κανένα.</span>'}</div>
-   <p class="note">kcal = θερμίδες, <span class="pr">P = πρωτεΐνη</span>, <span style="color:var(--carb)">C = υδατάνθρακες</span>, <span style="color:var(--fat)">F = λιπαρά</span>. «Εκτίμηση» σημαίνει συνηθισμένες τιμές που έβαλα εγώ: διόρθωσέ τες από τη συσκευασία.</p></section>`;
+   <p class="note">kcal = θερμίδες, <span class="pr">P = πρωτεΐνη</span>, <span style="color:var(--carb)">C = υδατάνθρακες</span>, <span style="color:var(--fat)">F = λιπαρά</span>. <span class="tag bc">barcode</span> τιμές από τη συσκευασία, <span class="tag est">εκτίμηση</span> συνηθισμένες τιμές που έβαλα εγώ (διόρθωσέ τες από τη συσκευασία), <span class="tag ok">✓</span> ελεγμένες τιμές.</p></section>`;
   else h+=`<section class="card" style="gap:4px"><div class="row between"><h3>Συνταγές</h3><button class="btn sm primary" id="newMeal">+ Νέα συνταγή</button></div>
   <div class="list">${meals.map(m=>{const n=mealNutr(m),sv=servOf(m);return `<div class="li"><span class="n">${esc(m.name)}</span>
    <span class="v">${MXn(n)}<br><span class="muted">${sv>1?"ανά μερίδα ("+sv+")":"ανά μερίδα"}</span></span><button class="btn sm" data-em="${m.id}">Επεξ.</button></div>`}).join("")||'<span class="note">Καμία.</span>'}</div>
@@ -930,7 +936,7 @@ function editMeal(id){
      <label class="field"><span>Βγάζει μερίδες</span><input id="mserv" type="number" inputmode="numeric" min="1" step="1" value="${servOf(m)}"></label>
      ${fixed()?'<p class="note">Παλιά συνταγή με σταθερές τιμές. Κρατάει τις τιμές της· μόλις προσθέσεις υλικά, υπολογίζεται από αυτά.</p>':""}
      <span class="label">Υλικά (για όλη τη συνταγή)</span>
-     <div class="opts">${rows.map((pt,i)=>{const f=food(pt.food),sv=puOf(pt)==="sv";return `<div class="pitem"><span>${esc(f?f.name:"?")}</span><input type="number" inputmode="decimal" id="pq-${i}" data-pq="${i}" value="${!f?pt.qty:sv?toSv(f,pt.qty):toG(f,pt.qty)}">${hasSv(f)?`<button class="btn sm" data-pu="${i}" title="Αλλαγή μονάδας">${sv?esc(plur(svName(f),2)):"γρ."}</button>`:`<span class="muted small">${!f||f.u==="g"?"γρ.":esc(plur(svName(f),2))}</span>`}<button class="btn sm danger" data-pr="${i}" aria-label="Αφαίρεση">×</button></div>`}).join("")||'<span class="note">Κανένα υλικό ακόμα.</span>'}</div>
+     <div class="opts">${rows.map((pt,i)=>{const f=food(pt.food),sv=puOf(pt)==="sv";return `<div class="pitem"><span>${esc(f?f.name:"?")}${srcTag(f)}</span><input type="number" inputmode="decimal" id="pq-${i}" data-pq="${i}" value="${!f?pt.qty:sv?toSv(f,pt.qty):toG(f,pt.qty)}">${hasSv(f)?`<button class="btn sm" data-pu="${i}" title="Αλλαγή μονάδας">${sv?esc(plur(svName(f),2)):"γρ."}</button>`:`<span class="muted small">${!f||f.u==="g"?"γρ.":esc(plur(svName(f),2))}</span>`}<button class="btn sm danger" data-pr="${i}" aria-label="Αφαίρεση">×</button></div>`}).join("")||'<span class="note">Κανένα υλικό ακόμα.</span>'}</div>
      <select id="addPart"><option value="">+ Πρόσθεσε υλικό…</option>${[...S.lib.foods].sort(byName).map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join("")}</select>
      <div class="tot" id="mtot">${servOf(m)>1?"Ανά μερίδα":"Σύνολο"}: ${nv(n)}</div>
      <div class="field"><span>Ταιριάζει για</span><div class="row">${SLOTS.map((s,i)=>`<label class="chip"><input type="checkbox" id="ms-${i}" data-ms="${i}" ${m.s?.includes(i)?"checked":""}> ${s.n} ${s.t}</label>`).join("")}</div></div>
