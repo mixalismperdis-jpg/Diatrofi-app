@@ -156,11 +156,6 @@ header.top .wrap{gap:6px}
 .form{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .field{display:flex;flex-direction:column;gap:4px}
 .field>span{font-size:12px;color:var(--muted);font-weight:700}
-.goals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.goal{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface);text-align:left;display:flex;flex-direction:column;gap:2px}
-.goal.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.goal .gk{font-size:18px;font-weight:800}
-.goal .gp{font-size:13px;color:var(--prot);font-weight:700}
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .stat{display:flex;flex-direction:column;gap:2px}
 .stat .x{font-size:20px;font-weight:800}
@@ -225,7 +220,6 @@ nav.tabs button.on{color:var(--ink)}
 .gset input{padding:6px 8px;text-align:center;font-weight:700;font-size:16px}
 .gset input::placeholder{color:var(--muted);opacity:.55;font-weight:500}
 .gset .x{font-size:12px;color:var(--muted)}
-@media (max-width:420px){.goals{grid-template-columns:1fr}.goal{flex-direction:row;justify-content:space-between;align-items:baseline;flex-wrap:wrap}}
 </style>
 
 </head>
@@ -254,7 +248,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v32",at:""};
+const APP_VER={v:"v33",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -281,7 +275,7 @@ const DEFAULT_PLAN={days:[
  ["b1","s1","l4","m3","s2","d3"],["b1","s1","l1","m4","s2","d4"],["b3","s1","l1","m1","s2","d1"],
  ["b4","s1","l5","m4","s2","d2"]]};
 const DEFAULT_BODY={profile:{sex:"m",age:"",height:"",weight:"",activity:"1.55",neck:"",waist:"",hip:"",chest:"",arm:"",thigh:""},
-  goal:"maint",targetMode:"manual",manual:{kcal:2750,p:180},fatPct:27,train:{days:[false,false,false,false,false,false,false],extra:200},since:null,history:[]};
+  manual:{kcal:2750,p:180,c:322},train:{days:[false,false,false,false,false,false,false],extra:200},since:null,history:[]};
 
 /* ---------- Κατάσταση & βοηθητικά ---------- */
 const S={tab:"today",sub:"plan",lib:{ver:2,foods:DEFAULT_FOODS,meals:DEFAULT_MEALS},plan:null,body:DEFAULT_BODY,
@@ -382,8 +376,8 @@ function dayLogged(iso){if(iso===S.date)return S.dayEdited;const d=S.docs[iso];r
 function isTrain(iso){const d=iso===S.date?S.day:S.docs[iso];if(d&&typeof d.train==="boolean")return d.train;if(gymOn(iso))return true;return !!S.body.train.days[wd(iso)]}
 
 /* ---------- Στόχοι ---------- */
-function bodyCalc(){
-  const pr=S.body.profile, w=+pr.weight, h=+pr.height, a=+pr.age, act=+pr.activity||1.55, male=pr.sex!=="f";
+function bodyCalc(pr=S.body.profile){
+  const w=+pr.weight, h=+pr.height, a=+pr.age, act=+pr.activity||1.55, male=pr.sex!=="f";
   const out={ok:w>0&&h>0&&a>0};
   const neck=+pr.neck, waist=+pr.waist, hip=+pr.hip;
   if(h>0&&neck>0&&waist>0&&(male?waist>neck:(hip>0&&waist+hip>neck))){
@@ -397,14 +391,13 @@ function bodyCalc(){
   out.katch=out.lbm?370+21.6*out.lbm:null;
   out.bmr=out.katch?(out.mifflin+out.katch)/2:out.mifflin;
   out.tdee=out.bmr*act;
-  out.goals={cut:{k:out.tdee*0.8,p:w*2.2,label:"Γράμμωση",sub:"−20% · ~0,5–0,7 κιλά/εβδ."},
-    maint:{k:out.tdee,p:w*1.8,label:"Συντήρηση",sub:"σταθερό βάρος"},
-    bulk:{k:out.tdee*1.1,p:w*1.8,label:"Όγκος",sub:"+10% · ~0,25 κιλά/εβδ."}};
+  // οι παλιοί στόχοι (γράμμωση/συντήρηση/όγκος) χρειάζονται μόνο για τη μετατροπή παλιών εγγράφων (migrateTarget)
+  out.goals={cut:{k:out.tdee*0.8,p:w*2.2},maint:{k:out.tdee,p:w*1.8},bulk:{k:out.tdee*1.1,p:w*1.8}};
   return out}
-function baseTarget(){if(S.body.targetMode==="body"){const c=bodyCalc();if(c.ok){const g=c.goals[S.body.goal];return{k:g.k,p:g.p,src:g.label}}}
-  return{k:+S.body.manual.kcal||0,p:+S.body.manual.p||0,src:"Χειροκίνητος"}}
-function targetFor(tr){const b=baseTarget(),k=b.k+(tr?(+S.body.train.extra||0):0);
-  const f=k*(+S.body.fatPct||27)/100/9,c=Math.max(0,(k-4*b.p-9*f)/4);return{k,p:b.p,c,f,src:b.src,train:tr}}
+// Στόχος: θερμίδες, πρωτεΐνη και υδατάνθρακες χειροκίνητα· λιπαρά = ό,τι μένει. Μέρα προπόνησης: οι έξτρα θερμίδες πάνε στους υδατάνθρακες.
+const fatOf=(k,p,c)=>(k-4*p-4*c)/9;
+function targetFor(tr){const m=S.body.manual,x=tr?(+S.body.train.extra||0):0,k=(+m.kcal||0)+x,p=+m.p||0,c=(+m.c||0)+x/4;
+  return{k,p,c,f:Math.max(0,fatOf(k,p,c)),train:tr}}
 function target(iso=S.date){return targetFor(isTrain(iso))}
 
 /* ---------- Αποθήκευση (Supabase) ---------- */
@@ -495,7 +488,13 @@ function migrateLib(lib){
   for(const dm of DEFAULT_MEALS){const m=byM[dm.id];if(m){if(m.c==null&&!m.parts){m.c=dm.c;m.f=dm.f}if(!m.ing)m.ing=dm.ing}}
   lib.foods.forEach(f=>{if(f.c==null){f.c=0;f.f=0}if(!f.cat)f.cat="Άλλα"});
   lib.ver=2;return lib}
-function mergeBody(b){return{...DEFAULT_BODY,...b,profile:{...DEFAULT_BODY.profile,...(b.profile||{})},manual:{...DEFAULT_BODY.manual,...(b.manual||{})},
+// v33: δεν υπάρχει πια «Διάλεξε στόχο» ούτε «% λιπαρών». Ένα παλιό έγγραφο κρατάει τον στόχο που έδειχνε:
+// από τα στοιχεία σώματος αν ήταν επιλεγμένος αυτός, και υδατάνθρακες όσους έβγαζε το παλιό % λιπαρών.
+function migrateTarget(b){const m={kcal:DEFAULT_BODY.manual.kcal,p:DEFAULT_BODY.manual.p,...(b.manual||{})};
+  if(b.targetMode==="body"){const c=bodyCalc({...DEFAULT_BODY.profile,...(b.profile||{})});if(c.ok){const g=c.goals[b.goal]||c.goals.maint;m.kcal=Math.round(g.k);m.p=Math.round(g.p)}}
+  if(m.c==null||m.c===""){const k=+m.kcal||0;m.c=Math.round(Math.max(0,(k-k*(+b.fatPct||27)/100-4*(+m.p||0))/4))}
+  const o={...b,manual:m};delete o.targetMode;delete o.goal;delete o.fatPct;return o}
+function mergeBody(b){b=migrateTarget(b);return{...DEFAULT_BODY,...b,profile:{...DEFAULT_BODY.profile,...(b.profile||{})},manual:{...DEFAULT_BODY.manual,...b.manual},
   train:{...DEFAULT_BODY.train,...(b.train||{})},history:b.history||[]}}
 async function cloudPhase(){
   ST.db=true;setSync("Συγχρονισμός…");S.docs={};S.allLoaded=false;
@@ -1010,23 +1009,24 @@ function renderBody(){
    <div class="form">${fld("neck","Λαιμός",'step="0.5"')}${fld("waist","Μέση (αφαλός)",'step="0.5"')}${pr.sex==="f"?fld("hip","Γοφοί",'step="0.5"'):""}${fld("chest","Στήθος",'step="0.5"')}${fld("arm","Μπράτσο",'step="0.5"')}${fld("thigh","Μηρός",'step="0.5"')}</div>
    <p class="note">Λαιμός: κάτω από το καρύδι. Μέση: στο ύψος του αφαλού, χαλαρή κοιλιά, μετά την εκπνοή. Μέτρα το πρωί πριν το φαγητό.</p>
    <button class="btn primary" id="logMeas" style="align-self:flex-start">Καταγραφή σημερινής μέτρησης</button></section>`;
-  if(!c.ok)h+=`<section class="card"><p class="note">Συμπλήρωσε ηλικία, ύψος και βάρος για να δεις θερμίδες συντήρησης, γράμμωσης και όγκου.</p></section>`;
+  if(!c.ok)h+=`<section class="card"><p class="note">Συμπλήρωσε ηλικία, ύψος και βάρος για να δεις λίπος σώματος, μεταβολισμό και θερμίδες συντήρησης.</p></section>`;
   else h+=`<section class="card"><h3>Αποτελέσματα</h3><div class="stats">
      <div class="stat"><span class="label">Λίπος σώματος</span><span class="x">${c.bf?r1(c.bf)+"%":"—"}</span><span class="small muted">${c.bf?"μέθοδος US Navy":"βάλε λαιμό & μέση"}</span></div>
      <div class="stat"><span class="label">Άλιπη μάζα</span><span class="x">${c.lbm?r1(c.lbm)+" κ.":"—"}</span><span class="small muted">${c.fat?"λίπος "+r1(c.fat)+" κ.":""}</span></div>
      <div class="stat"><span class="label">Μεταβολισμός</span><span class="x">${r0(c.bmr)}</span><span class="small muted">kcal σε ηρεμία</span></div>
      <div class="stat"><span class="label">ΔΜΣ</span><span class="x">${r1(c.bmi)}</span><span class="small muted">${c.whtr?"μέση/ύψος "+c.whtr.toFixed(2):""}</span></div></div>
-     <span class="label">Διάλεξε στόχο</span><div class="goals">${["cut","maint","bulk"].map(g=>{const o=c.goals[g];return `<button class="goal ${S.body.goal===g?"on":""}" data-goal="${g}"><b>${o.label}</b><span class="gk">${r0(o.k/10)*10} kcal</span><span class="gp">${r0(o.p)} γρ. πρωτεΐνη</span><span class="small muted">${o.sub}</span></button>`}).join("")}</div>
-     <label class="chip" style="align-self:flex-start;padding:6px 10px"><input type="checkbox" id="useBody" ${S.body.targetMode==="body"?"checked":""}> Χρήση αυτού του στόχου στο «Σήμερα»</label>
-     <p class="note">Εκτίμηση${c.katch?" (μέσος όρος Mifflin-St Jeor και Katch-McArdle)":" (Mifflin-St Jeor)"}. Μετά από 2–3 εβδομάδες κοίτα την πορεία του βάρους: αν μένει σταθερό ενώ θες γράμμωση, κατέβασε 150–200 kcal.</p></section>`;
-  const tr=S.body.train;
+     <p class="note">Θερμίδες συντήρησης περίπου <b>${r0(c.tdee/10)*10} kcal</b> τη μέρα. Εκτίμηση${c.katch?" (μέσος όρος Mifflin-St Jeor και Katch-McArdle)":" (Mifflin-St Jeor)"}. Μετά από 2–3 εβδομάδες κοίτα την πορεία του βάρους: αν μένει σταθερό ενώ θες γράμμωση, κατέβασε 150–200 kcal.</p></section>`;
+  const tr=S.body.train,mn=S.body.manual;
+  const fatLine=(k,p,c)=>{const f=fatOf(k,p,c);return f<0?`<span style="color:var(--warn)">Πρωτεΐνη και υδατάνθρακες ξεπερνούν τις θερμίδες κατά ${r0(-f*9)} kcal.</span>`
+    :`Λιπαρά: <b style="color:var(--fat)">${r0(f)} γρ.</b> <span class="muted">(${k>0?r0(f*900/k):0}% των θερμίδων, ό,τι μένει)</span>`};
   h+=`<section class="card"><h3>Στόχος & προπονήσεις</h3>
-    <div class="form"><label class="field"><span>Θερμίδες (χειροκίνητα)</span><input id="mk2" type="number" inputmode="decimal" value="${S.body.manual.kcal}" ${S.body.targetMode==="body"?"disabled":""}></label>
-    <label class="field"><span>Πρωτεΐνη (γρ.)</span><input id="mp2" type="number" inputmode="decimal" value="${S.body.manual.p}" ${S.body.targetMode==="body"?"disabled":""}></label>
-    <label class="field"><span>Λιπαρά (% θερμίδων)</span><input id="fat2" type="number" inputmode="decimal" value="${S.body.fatPct}"></label>
+    <div class="form"><label class="field"><span>Θερμίδες</span><input id="mk2" type="number" inputmode="decimal" value="${mn.kcal}"></label>
+    <label class="field"><span>Πρωτεΐνη (γρ.)</span><input id="mp2" type="number" inputmode="decimal" value="${mn.p}"></label>
+    <label class="field"><span>Υδατάνθρακες (γρ.)</span><input id="mc2" type="number" inputmode="decimal" value="${mn.c}"></label>
     <label class="field"><span>Μέρα προπόνησης: + kcal</span><input id="tex" type="number" inputmode="decimal" step="50" value="${tr.extra}"></label></div>
+    <span class="small" id="fatLine">${fatLine(+mn.kcal||0,+mn.p||0,+mn.c||0)}</span>
     <div class="field"><span>Συνήθεις μέρες προπόνησης</span><div class="days7">${DSH.map((d,i)=>`<label class="chip ${tr.days[i]?"on":""}"><input type="checkbox" id="td-${i}" data-td="${i}" ${tr.days[i]?"checked":""}> ${d}</label>`).join("")}</div></div>
-    <p class="note">${S.body.targetMode==="body"?"Τώρα χρησιμοποιείται ο στόχος από τα στοιχεία σου.":"Τώρα χρησιμοποιείται ο χειροκίνητος στόχος."} Στις μέρες προπόνησης ο στόχος ανεβαίνει κατά ${r0(+tr.extra||0)} kcal (κυρίως υδατάνθρακες). Αλλάζεις μια συγκεκριμένη μέρα από το κουμπί στο «Σήμερα».</p></section>`;
+    <p class="note">Στις μέρες προπόνησης ο στόχος ανεβαίνει κατά ${r0(+tr.extra||0)} kcal, που πάνε στους υδατάνθρακες (+${r0((+tr.extra||0)/4)} γρ.). Αλλάζεις μια συγκεκριμένη μέρα από το κουμπί στο «Σήμερα».</p></section>`;
   h+=`<section class="card"><h3>Πορεία διατροφής</h3><div id="nutriHist"><p class="note">Φόρτωση…</p></div></section>`;
   const hist=S.body.history;
   h+=`<section class="card"><h3>Πορεία σώματος</h3>`;
@@ -1036,10 +1036,9 @@ function renderBody(){
   h+=`</section>`;
   main.innerHTML=h;
   main.querySelectorAll("[data-b]").forEach(el=>el.onchange=()=>{pr[el.dataset.b]=el.value;saveBody();render()});
-  main.querySelectorAll("[data-goal]").forEach(b=>b.onclick=()=>{S.body.goal=b.dataset.goal;saveBody();render()});
-  const ub=byId("useBody");if(ub)ub.onchange=()=>{S.body.targetMode=ub.checked?"body":"manual";saveBody();render();toast(ub.checked?"Ο στόχος του «Σήμερα» άλλαξε":"Επιστροφή στον χειροκίνητο στόχο")};
-  byId("mk2").onchange=e=>{S.body.manual.kcal=num(e.target.value);saveBody()};byId("mp2").onchange=e=>{S.body.manual.p=num(e.target.value);saveBody()};
-  byId("fat2").onchange=e=>{S.body.fatPct=Math.min(45,Math.max(15,num(e.target.value)||27));saveBody();render()};
+  [["mk2","kcal"],["mp2","p"],["mc2","c"]].forEach(([i,k])=>{const el=byId(i);
+    el.oninput=()=>{byId("fatLine").innerHTML=fatLine(num(byId("mk2").value),num(byId("mp2").value),num(byId("mc2").value))};
+    el.onchange=()=>{S.body.manual[k]=num(el.value);saveBody()}});
   byId("tex").onchange=e=>{S.body.train.extra=num(e.target.value);saveBody();render()};
   main.querySelectorAll("[data-td]").forEach(c=>c.onchange=()=>{S.body.train.days[+c.dataset.td]=c.checked;saveBody();render()});
   byId("logMeas").onclick=()=>{const c2=bodyCalc();if(!(+pr.weight)){toast("Βάλε πρώτα βάρος");return}
