@@ -215,6 +215,20 @@ nav.tabs button.on{color:var(--ink)}
 .gx-n:focus{border-color:var(--line)}
 .gx-h select{width:auto;padding:4px 6px;font-size:12px;color:var(--muted)}
 .gprev{font-size:12px;color:var(--muted)}
+.gbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 0 6px}
+.gbar .gb-w{display:flex;align-items:center;gap:4px;border:0;background:transparent;color:inherit;padding:4px 2px;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.gbar .gb-w svg{width:16px;height:16px;color:var(--muted)}
+@media (max-width:380px){.gbar .gb-w svg{display:none}}
+.gbar .gb-r{display:flex;flex-direction:column;align-items:flex-start;border:0;background:transparent;color:var(--muted);padding:0 4px;margin-left:auto;min-width:66px;line-height:1.1}
+.gbar .gb-r small{font-size:10px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
+.gbar .gb-r b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.gbar.rest .gb-r{color:var(--ink)} .gbar.done .gb-r{color:var(--ok)}
+.gbar .btn.sm{padding:5px 7px}
+.gbar .gb-s{padding:4px 5px;display:grid;place-items:center} .gbar .gb-s svg{width:18px;height:18px} .gbar .gb-s.off{color:var(--muted)}
+.gbar .gb-p{position:absolute;left:0;bottom:0;height:3px;border-radius:2px;background:var(--ink);transition:width .25s linear}
+.gbar.done .gb-p{background:var(--ok)}
+.gbar.flash{animation:gflash 1.4s ease-out}
+@keyframes gflash{0%,40%{background:var(--prot-soft)}100%{background:transparent}}
 .gset{display:grid;grid-template-columns:18px minmax(0,78px) auto minmax(0,64px) auto auto;gap:6px;align-items:center;justify-content:start}
 .gset .sn{font-size:12px;color:var(--muted);font-weight:700;text-align:center}
 .gset input{padding:6px 8px;text-align:center;font-weight:700;font-size:16px}
@@ -228,6 +242,7 @@ nav.tabs button.on{color:var(--ink)}
   <div class="wrap">
     <div class="row between"><h1 id="hTitle">Σήμερα</h1><div class="row" style="gap:6px;flex-wrap:nowrap"><span class="sync" id="sync">Σύνδεση…</span><button class="gear" id="gear" aria-label="Ρυθμίσεις"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div></div>
     <div id="gaugeBox"><div class="gauges" id="gauges"></div><div class="macros" id="macros"></div></div>
+    <div id="gymBar" class="gbar" hidden></div>
   </div>
 </header>
 
@@ -248,7 +263,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v33",at:""};
+const APP_VER={v:"v35",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -456,7 +471,7 @@ async function pushDirty(){if(!ST.db)return;for(const k of dirty()){const v=lsGe
 let hiddenAt=0;
 addEventListener("pagehide",flushAll);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"){hiddenAt=Date.now();flushAll();return}
   /* επιστροφή μετά από 10+ λεπτά (το κινητό κρατάει την εφαρμογή ανοιχτή): πάλι στο «Σήμερα» */
-  if(hiddenAt&&Date.now()-hiddenAt>600000&&S.day){closeSheet();S.tab="today";S.gymOpen=null;window.scrollTo(0,0);if(S.date!==todayISO()){S.date=todayISO();loadDay()}else render()}});
+  if(hiddenAt&&Date.now()-hiddenAt>600000&&S.day&&!(S.tab==="gym"&&gymRunning())){closeSheet();S.tab="today";S.gymOpen=null;window.scrollTo(0,0);if(S.date!==todayISO()){S.date=todayISO();loadDay()}else render()}});
 addEventListener("online",()=>{pushDirty().then(()=>setSync(ST.db?"Συγχρονισμένο":"Στη συσκευή"))});
 function setSync(t){const el=byId("sync");if(el)el.textContent=t}
 function saveLib(){save("lib",S.lib)} function savePlan(){save("plan",S.plan)} function saveBody(){save("body",S.body)}
@@ -540,7 +555,7 @@ function openLogin(){
     byId("lgSkip").onclick=()=>{lsSet("localOnly",true);closeSheet()}})}
 async function backupDownload(){
   await loadAllDays();await loadGym();const out={};
-  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith("diatrofi:")&&!/^diatrofi:(auth|dirty|tab|lastEmail|localOnly|shop:)/.test(k))out[k.slice(9)]=JSON.parse(localStorage.getItem(k))}}catch(e){}
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith("diatrofi:")&&!/^diatrofi:(auth|dirty|tab|lastEmail|localOnly|shop:|tmr:)/.test(k))out[k.slice(9)]=JSON.parse(localStorage.getItem(k))}}catch(e){}
   const blob=new Blob([JSON.stringify({app:"diatrofi",date:todayISO(),data:out},null,1)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="diatrofi-"+todayISO()+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 function backupRestore(){const inp=byId("restoreIn");inp.value="";inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;
@@ -581,7 +596,7 @@ const main=byId("main");
 function render(){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===S.tab));
   byId("hTitle").textContent={today:"Σήμερα",plan:S.sub==="shop"?"Λίστα για ψώνια":"Διατροφή",foods:"Τρόφιμα & συνταγές",body:"Το σώμα μου",gym:"Προπόνηση"}[S.tab];
-  renderGauges();
+  renderGauges();gymBar();
   ({today:renderToday,plan:renderPlan,foods:renderFoods,body:renderBody,gym:renderGym})[S.tab]()}
 
 function renderGauges(){
@@ -1095,7 +1110,8 @@ function weightChart(hist){
   </svg></div>`}
 
 /* ---------- Προπόνηση ---------- */
-/* έγγραφο gym:YYYY-MM-DD = {title, ex:[{n, m:"w"|"bw"|"t", sets:[{w,r,s}]}]} · r αριθμός ή "max" · διαγραφή = {deleted:true} */
+/* έγγραφο gym:YYYY-MM-DD = {title, ex:[{n, m:"w"|"bw"|"t", sets:[{w,r,s}]}], t0?, t1?, ta?} · r αριθμός ή "max" · διαγραφή = {deleted:true}
+   t0/t1 = έναρξη/τέλος (ms), ta = τελευταία καταγραφή σετ */
 const GDAYS=["ΔΕΥΤΕΡΑ","ΤΡΙΤΗ","ΤΕΤΑΡΤΗ","ΠΕΜΠΤΗ","ΠΑΡΑΣΚΕΥΗ","ΣΑΒΒΑΤΟ","ΚΥΡΙΑΚΗ"];
 const deacc=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"");
 const exKey=n=>deacc(n).toLowerCase().replace(/\s+/g," ").trim();
@@ -1176,7 +1192,7 @@ function renderGym(){
     h+=`<section class="card">${gymStatsHTML()}</section>`;
     if(!ds.length)h+=`<section class="card"><p class="note">Δεν υπάρχει προπόνηση ακόμα. Πάτα «+ Νέα» για να γράψεις τη σημερινή, ή «Από σημειώσεις» για να επικολλήσεις όσα κρατάς στο κινητό.</p></section>`;
     else h+=`<section class="card" style="gap:0;padding-block:4px"><div class="list">${ds.map(d=>{const g=S.gym[d],n=g.ex.reduce((a,e)=>a+e.sets.length,0);
-      return `<button class="gli" data-gopen="${d}"><span class="n"><b>${DSH[wd(d)]} ${fmtD(d)}</b>${g.title?" · "+esc(g.title):""}</span><span class="small muted">${g.ex.length} ασκ. · ${n} σετ</span></button>`}).join("")}</div></section>`}
+      return `<button class="gli" data-gopen="${d}"><span class="n"><b>${DSH[wd(d)]} ${fmtD(d)}</b>${g.title?" · "+esc(g.title):""}</span><span class="small muted">${g.ex.length} ασκ. · ${n} σετ${g.t0&&!g.t1?" · τώρα":g.t0&&g.t1>g.t0?" · "+durTxt(g.t1-g.t0):""}</span></button>`}).join("")}</div></section>`}
   main.innerHTML=h;
   byId("gs-list").onclick=()=>{S.gymSub="list";render()};byId("gs-prog").onclick=()=>{S.gymSub="prog";render()};
   byId("gNew").onclick=openNewGym;byId("gImp").onclick=openImport;
@@ -1218,7 +1234,7 @@ function openNewGym(){
       if(gymOn(d)){closeSheet();S.gymOpen=d;render();toast("Υπάρχει ήδη προπόνηση εκείνη τη μέρα");return}
       const src=tpl&&S.gym[tpl];
       S.gym[d]={title:src?src.title:"",ex:src?src.ex.map(e=>({n:e.n,m:e.m||"w",sets:e.sets.map(s=>({w:s.w,r:null,s:null}))})):[]};
-      saveGym(d);S.gymOpen=d;closeSheet();window.scrollTo(0,0);render()};
+      if(d===todayISO())gymStart(d);else saveGym(d);S.gymOpen=d;closeSheet();window.scrollTo(0,0);render()};
     const bind=()=>byId("ngT")&&byId("ngT").querySelectorAll("[data-tpl]").forEach(b=>b.onclick=()=>go(b.dataset.tpl));bind();
     byId("ngD").onchange=e=>{if(byId("ngT")){byId("ngT").innerHTML=list(e.target.value||todayISO());bind()}};
     byId("ngE").onclick=()=>go(null)})}
@@ -1240,10 +1256,72 @@ function openImport(){
     byId("imS").onclick=()=>{res.forEach(w=>{S.gym[w.d]={title:w.title,ex:w.ex};saveGym(w.d)});closeSheet();
       S.gymOpen=res.length===1?res[0].d:null;S.gymSub="list";window.scrollTo(0,0);render();toast(res.length===1?"Η προπόνηση αποθηκεύτηκε":"Αποθηκεύτηκαν "+res.length+" προπονήσεις")}})}
 
+/* ---------- Χρονόμετρα προπόνησης ----------
+   Διάρκεια: t0/t1/ta στο έγγραφο της προπόνησης (συγχρονίζεται). Διάλειμμα: μόνο σε αυτή τη συσκευή (tmr:rest, tmr:sec).
+   Μετράμε από χρονοσφραγίδες, όχι με μετρητή: με κλειδωμένη οθόνη η σελίδα σταματάει, αλλά ο χρόνος βγαίνει σωστός όταν ξανανοίξει. */
+const TM={rest:lsGet("tmr:rest"),beeped:false,iv:0,shape:"",ac:null};
+if(TM.rest&&Date.now()>=TM.rest.end)TM.beeped=true;
+const IDLE=2*3600e3; // 2 ώρες χωρίς σετ = ξεχασμένο «Τέλος»
+const restSec=()=>+lsGet("tmr:sec")||90;
+const muted=()=>!!lsGet("tmr:mute"); // κουμπί ηχείου στη μπάρα· η δόνηση και η αναλαμπή μένουν
+const SPK=off=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/>${off?'<path d="M17 9l5 6M22 9l-5 6"/>':'<path d="M16.5 8.5a5 5 0 0 1 0 7M19.5 5.5a9 9 0 0 1 0 13"/>'}</svg>`;
+const clk=ms=>{const t=Math.max(0,Math.floor(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t/60)%60,x=t%60;return(h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0")};
+const durTxt=ms=>{const m=Math.max(1,Math.round(ms/60000));return m<60?m+"΄":Math.floor(m/60)+" ώρ."+(m%60?" "+m%60+"΄":"")};
+function gymRunning(){let run=null;
+  for(const [d,g] of Object.entries(S.gym)){if(!g||g.deleted||!g.t0||g.t1)continue;
+    if(Date.now()-(g.ta||g.t0)>IDLE){g.t1=g.ta||g.t0;saveGym(d);continue} // κλείνει στο τελευταίο σετ
+    if(!run||d>run)run=d}
+  return run}
+function gymStart(d){const now=Date.now();
+  for(const [k,x] of Object.entries(S.gym))if(k!==d&&x&&!x.deleted&&x.t0&&!x.t1){x.t1=x.ta||now;saveGym(k)}
+  const g=S.gym[d];if(!g.t0)g.t0=now;delete g.t1;g.ta=now;saveGym(d)}
+function gymEnd(d){const g=S.gym[d];if(!g||!g.t0)return;g.t1=Date.now();saveGym(d);restStop();toast("Διάρκεια "+durTxt(g.t1-g.t0))}
+function restStart(){const sec=restSec();TM.rest={end:Date.now()+sec*1000,dur:sec};TM.beeped=false;lsSet("tmr:rest",TM.rest);unlockAudio();gymBar()}
+function restStop(){TM.rest=null;lsSet("tmr:rest",null);gymBar()}
+function restAdj(ds){lsSet("tmr:sec",Math.min(600,Math.max(15,restSec()+ds)));
+  const r=TM.rest;if(r){r.end+=ds*1000;r.dur=Math.max(15,r.dur+ds);if(r.end>Date.now())TM.beeped=false;lsSet("tmr:rest",r)}gymBar()}
+/* Ήχος: το iPhone ανοίγει τον ήχο μόνο μετά από άγγιγμα, οπότε «ξεκλειδώνει» στο πρώτο άγγιγμα στην Προπόνηση.
+   Ακούγεται μόνο με την εφαρμογή ανοιχτή στην οθόνη· στο iPhone όχι στο αθόρυβο. Δόνηση μόνο σε Android. */
+function unlockAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  if(!TM.ac){TM.ac=new AC();const b=TM.ac.createBuffer(1,1,22050),s=TM.ac.createBufferSource();s.buffer=b;s.connect(TM.ac.destination);s.start(0)}
+  if(TM.ac.state!=="running")TM.ac.resume()}catch(e){}}
+addEventListener("touchend",()=>{if(S.tab==="gym")unlockAudio()},{passive:true});addEventListener("click",()=>{if(S.tab==="gym")unlockAudio()});
+function beep(){try{navigator.vibrate&&navigator.vibrate([250,120,250,120,400])}catch(e){}
+  const ac=TM.ac;if(!ac||muted())return;
+  try{ac.resume();const t=ac.currentTime+.05;[0,.3,.6].forEach((o,i)=>{const os=ac.createOscillator(),g=ac.createGain();os.type="sine";os.frequency.value=i===2?1320:880;
+    g.gain.setValueAtTime(.0001,t+o);g.gain.exponentialRampToValueAtTime(.6,t+o+.02);g.gain.exponentialRampToValueAtTime(.0001,t+o+.25);
+    os.connect(g);g.connect(ac.destination);os.start(t+o);os.stop(t+o+.27)})}catch(e){}}
+// Μπάρα στην κεφαλίδα όσο τρέχει προπόνηση: διάρκεια · διάλειμμα (πάτα για έναρξη/στοπ, −15/+15) · Τέλος
+function gymBar(){const el=byId("gymBar");if(!el)return;const d=gymRunning();
+  if(!d){el.hidden=true;TM.shape="";if(TM.iv){clearInterval(TM.iv);TM.iv=0}if(TM.rest)restStop();return}
+  if(!TM.iv)TM.iv=setInterval(gymBar,250);
+  const now=Date.now(),g=S.gym[d],r=TM.rest,left=r?r.end-now:0,done=r&&left<=0;
+  if(done&&!TM.beeped){TM.beeped=true;if(-left<5000){beep();el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}}
+  const shape=d+"|"+(r?1:0);
+  if(TM.shape!==shape){TM.shape=shape;el.hidden=false;
+    el.innerHTML=`<button class="gb-w" id="gbW" aria-label="Διάρκεια προπόνησης"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg><span id="gbWt"></span></button>
+      <button class="gb-r" id="gbR" aria-label="${r?"Στοπ διαλείμματος":"Έναρξη διαλείμματος"}"><small id="gbRl"></small><b id="gbRt"></b></button>
+      <button class="btn sm" id="gbM" aria-label="15 δευτερόλεπτα λιγότερο">−15</button><button class="btn sm" id="gbP" aria-label="15 δευτερόλεπτα περισσότερο">+15</button>
+      <button class="btn sm gb-s" id="gbS"></button><button class="btn sm primary" id="gbE">Τέλος</button><i class="gb-p" id="gbPr"></i>`;
+    const spk=()=>{const b=byId("gbS"),m=muted();b.innerHTML=SPK(m);b.classList.toggle("off",m);b.setAttribute("aria-pressed",m);b.setAttribute("aria-label",m?"Άνοιγμα ήχου διαλείμματος":"Κλείσιμο ήχου διαλείμματος")};spk();
+    byId("gbS").onclick=()=>{const m=!muted();lsSet("tmr:mute",m||null);spk();if(m)toast("Ο ήχος του διαλείμματος έκλεισε");else{unlockAudio();beep();toast("Ο ήχος του διαλείμματος άνοιξε")}};
+    byId("gbW").onclick=()=>{if(S.tab==="gym"&&S.gymOpen===d)return;closeSheet();S.tab="gym";S.gymOpen=d;window.scrollTo(0,0);render()};
+    byId("gbR").onclick=()=>{unlockAudio();TM.rest?restStop():restStart()};
+    byId("gbM").onclick=()=>restAdj(-15);byId("gbP").onclick=()=>restAdj(15);
+    byId("gbE").onclick=()=>{gymEnd(d);render()}}
+  el.classList.toggle("rest",!!r&&!done);el.classList.toggle("done",!!done);
+  byId("gbWt").textContent=clk(now-g.t0);
+  byId("gbRl").textContent=!r?"Διάλειμμα":done?"Ώρα για σετ":"Διάλειμμα";
+  byId("gbRt").textContent=!r?clk(restSec()*1000):done?"+"+clk(-left):clk(left+999);
+  byId("gbPr").style.width=r&&!done?Math.max(0,Math.min(100,left/(r.dur*10)))+"%":done?"100%":"0"}
+
 function renderGymEdit(){
   const d=S.gymOpen,g=S.gym[d];
   const known=allExercises();
-  let h=`<div class="row between"><button class="btn sm" id="gBack">‹ Όλες</button><input type="date" id="gDate" value="${d}" style="width:auto;padding:5px 8px"></div>
+  const today=d===todayISO(),run=g.t0&&!g.t1;
+  const tm=run?"":g.t0&&g.t1>g.t0?`<span class="small muted">Διάρκεια ${durTxt(g.t1-g.t0)}</span>${today?'<button class="btn ghost sm" id="gGo">Συνέχεια</button>':""}`
+    :today?'<button class="btn sm" id="gGo">▶ Χρονόμετρο</button>':"";
+  let h=`<div class="row between"><button class="btn sm" id="gBack">‹ Όλες</button><div class="row" style="gap:6px">${tm}<input type="date" id="gDate" value="${d}" style="width:auto;padding:5px 8px"></div></div>
     <input class="gtitle" id="gTitle" value="${esc(g.title)}" placeholder="Τίτλος, π.χ. Legs & Abs">`;
   g.ex.forEach((e,i)=>{const m=e.m||"w",pv=prevEx(exKey(e.n),d),ps=pv?pv.e.sets:[],st=exStat(e);
     const best=exHistory(exKey(e.n)).filter(o=>o.d<d).reduce((a,o)=>Math.max(a,o.st.cmp),0),pr=st&&best>0&&st.cmp>best+.01;
@@ -1263,11 +1341,16 @@ function renderGymEdit(){
     <button class="btn danger sm" id="gDel" style="align-self:flex-start">Διαγραφή προπόνησης</button>`;
   main.innerHTML=h;
   const sv=()=>saveGym(d),ij=a=>a.split(".").map(Number);
+  // Καταγραφή σετ σήμερα: ξεκινάει το χρονόμετρο (αν δεν τρέχει ήδη) και το διάλειμμα. Όχι μετά το «Τέλος» ή σε άλλη μέρα.
+  const setDone=v=>{if(!today||v==null||v===""||g.t1)return;
+    if(!g.t0){gymStart(d);const b=byId("gGo");if(b)b.remove()} // χωρίς render: μένει ανοιχτό το πληκτρολόγιο
+    g.ta=Date.now();sv();restStart()};
   byId("gBack").onclick=()=>{S.gymOpen=null;render()};
+  const gGo=byId("gGo");if(gGo)gGo.onclick=()=>{unlockAudio();gymStart(d);render()};
   byId("gTitle").oninput=e=>{g.title=e.target.value.trim();sv()};
   byId("gDate").onchange=e=>{const nd=e.target.value;if(!nd||nd===d)return;
     if(gymOn(nd)){toast("Υπάρχει ήδη προπόνηση στις "+fmtD(nd));e.target.value=d;return}
-    S.gym[nd]={title:g.title,ex:g.ex};S.gym[d]={deleted:true};saveGym(nd);saveGym(d);S.gymOpen=nd;render();toast("Μεταφέρθηκε στις "+fmtD(nd))};
+    S.gym[nd]={...g};S.gym[d]={deleted:true};saveGym(nd);saveGym(d);S.gymOpen=nd;render();toast("Μεταφέρθηκε στις "+fmtD(nd))};
   const fit=el=>{el.style.height="auto";el.style.height=el.scrollHeight+el.offsetHeight-el.clientHeight+"px"}; // + περίγραμμα, αλλιώς το πεδίο κυλάει 2px και «τρώει» την κύλιση της σελίδας
   main.querySelectorAll("[data-xn]").forEach(el=>{fit(el);
     el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.blur()}};
@@ -1292,9 +1375,9 @@ function renderGymEdit(){
   main.querySelectorAll("[data-xm]").forEach(el=>el.oninput=()=>{g.ex[+el.dataset.xm].m=el.value;sv();render()});
   main.querySelectorAll("[data-xdel]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.xdel];if(e.sets.some(s=>s.r!=null||s.s!=null)&&!confirm("Διαγραφή της άσκησης «"+e.n+"»;"))return;g.ex.splice(+b.dataset.xdel,1);sv();render()});
   main.querySelectorAll("[data-sw]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sw);g.ex[i].sets[j].w=pnum(el.value);sv()});
-  main.querySelectorAll("[data-sr]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sr),v=el.value.trim().toLowerCase(),n=pnum(v);g.ex[i].sets[j].r=v==="max"?"max":n==null?null:Math.round(n);sv()});
-  main.querySelectorAll("[data-ss]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.ss),n=pnum(el.value);g.ex[i].sets[j].s=n==null?null:Math.round(n);sv()});
-  main.querySelectorAll("[data-smax]").forEach(b=>b.onclick=()=>{const [i,j]=ij(b.dataset.smax);g.ex[i].sets[j].r="max";sv();render()});
+  main.querySelectorAll("[data-sr]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sr),v=el.value.trim().toLowerCase(),n=pnum(v);g.ex[i].sets[j].r=v==="max"?"max":n==null?null:Math.round(n);sv();setDone(g.ex[i].sets[j].r)});
+  main.querySelectorAll("[data-ss]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.ss),n=pnum(el.value);g.ex[i].sets[j].s=n==null?null:Math.round(n);sv();setDone(g.ex[i].sets[j].s)});
+  main.querySelectorAll("[data-smax]").forEach(b=>b.onclick=()=>{const [i,j]=ij(b.dataset.smax);g.ex[i].sets[j].r="max";sv();setDone("max");render()});
   main.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=()=>{g.ex[+b.dataset.sdel].sets.pop();sv();render()});
   main.querySelectorAll("[data-sadd]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.sadd],l=e.sets[e.sets.length-1];e.sets.push({w:l?l.w:null,r:null,s:null});sv();render()});
   byId("gxAdd").onclick=()=>{const n=byId("gxNew").value.trim();if(!n)return;const pv=prevEx(exKey(n),d);
