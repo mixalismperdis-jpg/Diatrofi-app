@@ -263,7 +263,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v35",at:""};
+const APP_VER={v:"v36",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -1259,7 +1259,7 @@ function openImport(){
 /* ---------- Χρονόμετρα προπόνησης ----------
    Διάρκεια: t0/t1/ta στο έγγραφο της προπόνησης (συγχρονίζεται). Διάλειμμα: μόνο σε αυτή τη συσκευή (tmr:rest, tmr:sec).
    Μετράμε από χρονοσφραγίδες, όχι με μετρητή: με κλειδωμένη οθόνη η σελίδα σταματάει, αλλά ο χρόνος βγαίνει σωστός όταν ξανανοίξει. */
-const TM={rest:lsGet("tmr:rest"),beeped:false,iv:0,shape:"",ac:null};
+const TM={rest:lsGet("tmr:rest"),beeped:false,iv:0,shape:"",ac:null,acOld:false,wl:null,wlp:false};
 if(TM.rest&&Date.now()>=TM.rest.end)TM.beeped=true;
 const IDLE=2*3600e3; // 2 ώρες χωρίς σετ = ξεχασμένο «Τέλος»
 const restSec=()=>+lsGet("tmr:sec")||90;
@@ -1276,16 +1276,27 @@ function gymStart(d){const now=Date.now();
   for(const [k,x] of Object.entries(S.gym))if(k!==d&&x&&!x.deleted&&x.t0&&!x.t1){x.t1=x.ta||now;saveGym(k)}
   const g=S.gym[d];if(!g.t0)g.t0=now;delete g.t1;g.ta=now;saveGym(d)}
 function gymEnd(d){const g=S.gym[d];if(!g||!g.t0)return;g.t1=Date.now();saveGym(d);restStop();toast("Διάρκεια "+durTxt(g.t1-g.t0))}
-function restStart(){const sec=restSec();TM.rest={end:Date.now()+sec*1000,dur:sec};TM.beeped=false;lsSet("tmr:rest",TM.rest);unlockAudio();gymBar()}
+function restStart(){const sec=restSec();TM.rest={end:Date.now()+sec*1000,dur:sec};TM.beeped=false;lsSet("tmr:rest",TM.rest);unlockAudio();wakeOn();gymBar()}
 function restStop(){TM.rest=null;lsSet("tmr:rest",null);gymBar()}
 function restAdj(ds){lsSet("tmr:sec",Math.min(600,Math.max(15,restSec()+ds)));
   const r=TM.rest;if(r){r.end+=ds*1000;r.dur=Math.max(15,r.dur+ds);if(r.end>Date.now())TM.beeped=false;lsSet("tmr:rest",r)}gymBar()}
-/* Ήχος: το iPhone ανοίγει τον ήχο μόνο μετά από άγγιγμα, οπότε «ξεκλειδώνει» στο πρώτο άγγιγμα στην Προπόνηση.
-   Ακούγεται μόνο με την εφαρμογή ανοιχτή στην οθόνη· στο iPhone όχι στο αθόρυβο. Δόνηση μόνο σε Android. */
+/* Ήχος: το iPhone ανοίγει τον ήχο μόνο μετά από άγγιγμα, οπότε «ξεκλειδώνει» σε κάθε άγγιγμα όσο τρέχει προπόνηση.
+   Μετά από κλείδωμα της οθόνης ο παλιός ήχος του iPhone μένει συχνά «νεκρός» (λέει ότι παίζει αλλά δεν ακούγεται),
+   οπότε στο πρώτο άγγιγμα μετά την επιστροφή φτιάχνεται καινούριος. Ακούγεται μόνο με την εφαρμογή ανοιχτή στην οθόνη·
+   στο iPhone όχι στο αθόρυβο. Δόνηση μόνο σε Android. */
 function unlockAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-  if(!TM.ac){TM.ac=new AC();const b=TM.ac.createBuffer(1,1,22050),s=TM.ac.createBufferSource();s.buffer=b;s.connect(TM.ac.destination);s.start(0)}
+  if(TM.ac&&(TM.acOld||TM.ac.state==="closed"||TM.ac.state==="interrupted")){try{TM.ac.close()}catch(e){}TM.ac=null}
+  if(!TM.ac){TM.ac=new AC();TM.acOld=false;const b=TM.ac.createBuffer(1,1,22050),s=TM.ac.createBufferSource();s.buffer=b;s.connect(TM.ac.destination);s.start(0)}
   if(TM.ac.state!=="running")TM.ac.resume()}catch(e){}}
-addEventListener("touchend",()=>{if(S.tab==="gym")unlockAudio()},{passive:true});addEventListener("click",()=>{if(S.tab==="gym")unlockAudio()});
+const gymTouch=()=>{if(S.tab==="gym"||gymRunning()){unlockAudio();if(TM.rest)wakeOn()}};
+addEventListener("touchend",gymTouch,{passive:true});addEventListener("click",gymTouch);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")TM.acOld=true;else gymBar()});
+addEventListener("pageshow",e=>{if(e.persisted)TM.acOld=true});
+/* Οθόνη αναμμένη όσο τρέχει διάλειμμα (και 15″ μετά), για να μη σβήσει μόνη της και χαθεί ο ήχος.
+   Αν πατήσεις εσύ το κουμπί κλειδώματος, ο ήχος δεν μπορεί να ακουστεί. */
+function wakeOn(){if(TM.wl||TM.wlp||!navigator.wakeLock||document.visibilityState!=="visible")return;TM.wlp=true;
+  navigator.wakeLock.request("screen").then(l=>{TM.wl=l;l.addEventListener("release",()=>{if(TM.wl===l)TM.wl=null})}).catch(()=>{}).finally(()=>{TM.wlp=false})}
+function wakeOff(){const l=TM.wl;TM.wl=null;try{l&&l.release()}catch(e){}}
 function beep(){try{navigator.vibrate&&navigator.vibrate([250,120,250,120,400])}catch(e){}
   const ac=TM.ac;if(!ac||muted())return;
   try{ac.resume();const t=ac.currentTime+.05;[0,.3,.6].forEach((o,i)=>{const os=ac.createOscillator(),g=ac.createGain();os.type="sine";os.frequency.value=i===2?1320:880;
@@ -1293,9 +1304,10 @@ function beep(){try{navigator.vibrate&&navigator.vibrate([250,120,250,120,400])}
     os.connect(g);g.connect(ac.destination);os.start(t+o);os.stop(t+o+.27)})}catch(e){}}
 // Μπάρα στην κεφαλίδα όσο τρέχει προπόνηση: διάρκεια · διάλειμμα (πάτα για έναρξη/στοπ, −15/+15) · Τέλος
 function gymBar(){const el=byId("gymBar");if(!el)return;const d=gymRunning();
-  if(!d){el.hidden=true;TM.shape="";if(TM.iv){clearInterval(TM.iv);TM.iv=0}if(TM.rest)restStop();return}
+  if(!d){el.hidden=true;TM.shape="";if(TM.iv){clearInterval(TM.iv);TM.iv=0}if(TM.wl)wakeOff();if(TM.rest)restStop();return}
   if(!TM.iv)TM.iv=setInterval(gymBar,250);
   const now=Date.now(),g=S.gym[d],r=TM.rest,left=r?r.end-now:0,done=r&&left<=0;
+  if(r&&left>-15000)wakeOn();else if(TM.wl)wakeOff();
   if(done&&!TM.beeped){TM.beeped=true;if(-left<5000){beep();el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}}
   const shape=d+"|"+(r?1:0);
   if(TM.shape!==shape){TM.shape=shape;el.hidden=false;
