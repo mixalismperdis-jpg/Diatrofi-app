@@ -20,11 +20,11 @@
 /* Layout: phone-first compact app; quiet monochrome with one green for protein; hairline cards, thin rings, bottom tab bar */
 :root{
   --bg:#FAFAF9; --surface:#FFFFFF; --surface-2:#F1F1EF; --line:#E4E4E1;
-  --ink:#1C1C1A; --muted:#75756F;
+  --ink:#1C1C1A; --muted:#6A6A64;
   --accent:#1C1C1A; --accent-ink:#FFFFFF;
   --prot:#2F7A68; --prot-soft:#E5F0EC;
   --warn:#C2412D; --warn-soft:#FBE9E5; --ok:#2F7A68;
-  --carb:#B7791F; --fat:#4A6FA5;
+  --carb:#9C6511; --fat:#4A6FA5;
   --f-ui:"Commissioner",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -53,6 +53,7 @@ button{cursor:pointer}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn.ghost{border-color:transparent;padding:6px 8px}
 .btn.danger{color:var(--warn)}
+.acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.acts>.danger:last-child{margin-left:auto}
 .btn.sm{padding:5px 10px;font-size:13px}
 .btn:disabled{opacity:.5}
 input,select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0;width:100%}
@@ -64,8 +65,12 @@ input[type=checkbox]{width:auto;accent-color:var(--prot)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0}
 .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:99px;padding:5px 10px;background:var(--surface-2);color:var(--muted);border:0}
-.chip.on{background:var(--prot-soft);color:var(--prot)}
-.svbox{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}.svt{align-self:flex-start;font-size:13px;padding:7px 12px}.svt.on{background:var(--accent);color:var(--accent-ink)}
+.chip.on,label.chip:has(>input:checked){background:var(--prot-soft);color:var(--prot)}
+label.chip>input[type=checkbox]{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+label.chip{position:relative;cursor:pointer}
+label.chip:has(>input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+label.chip:has(>input:disabled){cursor:default}
+.svbox{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}.svt{align-self:flex-start;font-size:13px;padding:7px 12px}.svt.on,label.chip.svt:has(>input:checked){background:var(--accent);color:var(--accent-ink)}
 .cats{display:flex;flex-wrap:wrap;gap:6px}.chip.sel{background:var(--accent);color:var(--accent-ink)}
 .seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:2px;align-self:flex-start}
 .seg button{border:0;background:transparent;padding:5px 12px;font-size:13px;font-weight:700;border-radius:8px;color:var(--muted)}
@@ -75,7 +80,9 @@ input[type=checkbox]{width:auto;accent-color:var(--prot)}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
   padding-block:8px;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));margin-bottom:4px}
 header.top .wrap{gap:6px}
-.sync{font-size:11.5px;color:var(--muted);text-align:right}
+header.top .row.between{flex-wrap:nowrap}
+header.top h1{white-space:nowrap}
+.sync{font-size:11.5px;color:var(--muted);text-align:right;line-height:1.25;min-width:0;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .gear{border:0;background:transparent;color:inherit;padding:4px;width:32px;height:32px;display:grid;place-items:center} .gear svg{width:22px;height:22px}
 .gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .gauge{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;text-align:center}
@@ -106,7 +113,9 @@ header.top .wrap{gap:6px}
 .slot-head .t{font-size:13px;font-weight:700;flex:1}
 .slot-head .s{font-size:12px;color:var(--muted)}
 .slot-head .s b{color:var(--prot);font-weight:600}
-.plus{border:1px solid var(--line);background:transparent;width:26px;height:26px;border-radius:8px;font-size:16px;line-height:1;padding:0}
+.plus{position:relative;border:1px solid var(--line);background:transparent;width:26px;height:26px;border-radius:8px;font-size:16px;line-height:1;padding:0}
+.plus::after,.daynav .btn::after,.gear::after{content:"";position:absolute;inset:-8px}
+.daynav .btn,.gear{position:relative}
 .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:0;border-radius:6px;padding:4px 0;background:transparent;text-align:left;width:100%}
 .item:hover{background:var(--surface-2)}
 .item .n{min-width:0;font-size:13.5px;line-height:1.3}
@@ -132,13 +141,17 @@ header.top .wrap{gap:6px}
 .mx .k{color:var(--ink)}.mx .p{color:var(--prot);font-weight:600}.mx .c{color:var(--carb)}.mx .f{color:var(--fat)}
 
 /* plan / lists */
+.pjump{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.pjump .chip{justify-content:center;padding:6px 0}
 .plan-grid{display:grid;grid-template-columns:86px 1fr;gap:4px 8px;align-items:center}
 .plan-grid .sl{font-size:12px;color:var(--muted);font-weight:700}
 .plan-grid select{padding:6px 8px;font-size:13px}
 .tot{font-size:13px;font-weight:600}
 .tot b{color:var(--prot);font-weight:600}
 .list{display:flex;flex-direction:column}
-.li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line)}
+.li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 2px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;width:100%;color:inherit}
+button.li:active{background:var(--surface-2)}
+.li .chev{color:var(--muted);font-size:18px;line-height:1}
 .li:last-child{border-bottom:0}
 .li .n{min-width:0;font-size:14px;overflow-wrap:anywhere}
 .li .v{font-size:12px;text-align:right;white-space:nowrap}
@@ -160,10 +173,11 @@ header.top .wrap{gap:6px}
 .stat{display:flex;flex-direction:column;gap:2px}
 .stat .x{font-size:20px;font-weight:800}
 .chart svg{width:100%;height:auto;display:block}
+#nutriHist{display:flex;flex-direction:column;gap:12px}
 .tbl{overflow-x:auto}
 .tbl table{border-collapse:collapse;width:100%;min-width:420px;font-size:13px}
 .tbl th,.tbl td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
-.days7{display:flex;gap:6px;flex-wrap:wrap}
+.days7{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.days7 .chip{justify-content:center;padding:6px 0}
 
 /* tabs */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);
@@ -263,7 +277,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v36",at:""};
+const APP_VER={v:"v37",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -594,23 +608,25 @@ function suggest(Rk,Rp,slot){
 /* ---------- Render ---------- */
 const main=byId("main");
 function render(){
-  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===S.tab));
-  byId("hTitle").textContent={today:"Σήμερα",plan:S.sub==="shop"?"Λίστα για ψώνια":"Διατροφή",foods:"Τρόφιμα & συνταγές",body:"Το σώμα μου",gym:"Προπόνηση"}[S.tab];
+  document.querySelectorAll("nav.tabs button").forEach(b=>{const on=b.dataset.tab===S.tab;b.classList.toggle("on",on);if(on)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  byId("hTitle").textContent={today:dayTitle(),plan:S.sub==="shop"?"Λίστα για ψώνια":"Διατροφή",foods:"Τρόφιμα & συνταγές",body:"Το σώμα μου",gym:"Προπόνηση"}[S.tab];
   renderGauges();gymBar();
   ({today:renderToday,plan:renderPlan,foods:renderFoods,body:renderBody,gym:renderGym})[S.tab]()}
 
+// Τίτλος στο «Σήμερα»: η μέρα που βλέπεις (Χθες, Αύριο, ή μέρα και ημερομηνία)
+function dayTitle(){const t=todayISO();return S.date===t?"Σήμερα":S.date===addDays(t,-1)?"Χθες":S.date===addDays(t,1)?"Αύριο":DAYS[wd(S.date)]+" "+fmtD(S.date)}
 function renderGauges(){
   const box=byId("gaugeBox");
   if(S.tab!=="today"){box.hidden=true;return}box.hidden=false;
   const t=target(),s=sumItems(S.day.items);
-  const one=(cls,label,val,tg,unit,thr,col)=>{const frac=tg>0?Math.min(1,val/tg):0,diff=tg-val,C=2*Math.PI*40;
-    let rem,rc;if(Math.abs(diff)<=thr){rem="Στόχος ✓";rc="done"}else if(diff>0){rem="−"+r0(diff);rc="need"}else{rem="+"+r0(-diff)+" πάνω";rc="over"}
-    const stroke=diff<-thr?"var(--warn)":Math.abs(diff)<=thr?"var(--ok)":col;
+  const one=(cls,label,val,tg,unit,thr,col,atLeast)=>{const frac=tg>0?Math.min(1,val/tg):0,diff=tg-val,C=2*Math.PI*40;
+    let rem,rc;if(Math.abs(diff)<=thr){rem="Στόχος ✓";rc="done"}else if(diff>0){rem="−"+r0(diff);rc="need"}else if(atLeast){rem="+"+r0(-diff)+" ✓";rc="done"}else{rem="+"+r0(-diff)+" πάνω";rc="over"}
+    const stroke=rc==="over"?"var(--warn)":rc==="done"?"var(--ok)":col;
     return `<div class="gauge ${cls}"><div class="ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--surface-2)" stroke-width="7"/>
       <circle class="fg" cx="50" cy="50" r="40" fill="none" stroke="${stroke}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-frac)}"/></svg>
       <div class="c"><b>${r0(val)}</b><small>${unit}</small></div></div>
       <div class="gtext"><span class="label">${label}</span><span class="rem ${rc}">${rem}</span><span class="of">από ${r0(tg)}</span></div></div>`};
-  byId("gauges").innerHTML=one("k","Θερμίδες",s.k,t.k,"kcal",50,"var(--ink)")+one("p","Πρωτεΐνη",s.p,t.p,"γρ.",4,"var(--prot)")
+  byId("gauges").innerHTML=one("k","Θερμίδες",s.k,t.k,"kcal",50,"var(--ink)")+one("p","Πρωτεΐνη",s.p,t.p,"γρ.",4,"var(--prot)",true)
     +one("c","Υδατάνθρ.",s.c,t.c,"γρ.",Math.max(8,t.c*.05),"var(--carb)")+one("f","Λιπαρά",s.f,t.f,"γρ.",Math.max(4,t.f*.05),"var(--fat)");
   byId("macros").innerHTML=""}
 
@@ -652,7 +668,7 @@ function renderToday(){
     if(!sg.length)h+=`<p class="note">Δεν βρήκα συνδυασμό που να ταιριάζει. Πρόσθεσε τρόφιμα στη λίστα σου.</p>`;
     const fq=x=>`${esc(qtyTxt(x.f,x.q))} ${esc(x.f.name)}`;
     sg.forEach((o,ix)=>{const what=o.meal?esc(o.meal.name)+(o.s!==1?` <span class="muted">×${o.s}</span>`:"")+(o.extra?` <span class="muted">+</span> ${fq(o.extra)}`:""):o.parts.map(fq).join(" + ");
-      h+=`<div class="sg"><span class="what">${what}</span><button class="btn sm primary" data-sugg="${ix}">Πρόσθεσε</button>
+      h+=`<div class="sg"><span class="what">${what}</span><button class="btn sm" data-sugg="${ix}">Πρόσθεσε</button>
       <span class="res">+${MX(r0(o.k),r1(o.p))} → <b>${r0(s.k+o.k)}</b> / <b class="pr">${r1(s.p+o.p)}</b></span></div>`});
     S._sugg=sg}
   h+=`</section>`+weekHTML();
@@ -744,7 +760,7 @@ function openItemSheet(id){
     <div class="field"><span>${unitLbl}</span>
     ${f?qtyBox(f,it.qty||1):`<div class="stepper"><button class="btn" id="qm">−</button><input id="qty" type="number" inputmode="decimal" step="${st}" value="${it.qty||1}"><button class="btn" id="qp">+</button></div>`}</div>
     ${isMeal&&ingOf(meal(it.ref)).length?'<div class="field"><span>Υλικά για αυτή την ποσότητα</span><div class="ingl" id="ingl"></div></div>':""}
-    <div class="row"><button class="btn primary" id="ok">Αποθήκευση</button><button class="btn" id="swap">Αλλαγή με άλλο</button><button class="btn danger" id="del">Αφαίρεση</button></div>`,()=>{
+    <div class="acts"><button class="btn primary" id="ok">Αποθήκευση</button><button class="btn" id="swap">Αλλαγή με άλλο</button><button class="btn danger" id="del">Αφαίρεση</button></div>`,()=>{
     const calc=v=>itemNutr({...it,qty:v});
     const show=v=>{const n=calc(v);byId("pv").innerHTML=nv(n)+"<br>"+previewLine({k:n.k-base.k,p:n.p-base.p,c:n.c-base.c,f:n.f-base.f});const il=byId("ingl");if(il)il.innerHTML=ingLines(meal(it.ref),v)};
     let get;if(f)get=bindQty(f,show);else{get=()=>+byId("qty").value||0;const upd=()=>show(get());
@@ -829,9 +845,11 @@ function renderPlan(){
   let h=`<div class="seg"><button id="sub-plan" class="${S.sub==="plan"?"on":""}">Πρόγραμμα</button><button id="sub-shop" class="${S.sub==="shop"?"on":""}">Λίστα για ψώνια</button></div>`;
   if(S.sub==="shop"){main.innerHTML=h+shopHTML();bindPlanSeg();bindShop();return}
   h+=`<p class="note">Κάθε μέρα ξεκινά από εδώ. Πάτα «+» για να βάλεις συνταγή ή υλικό, ή πάτα κάτι για να αλλάξεις ποσότητα. Τις αλλαγές μιας συγκεκριμένης μέρας τις κάνεις στο «Σήμερα».</p>`;
+  h+=`<div class="pjump">${DSH.map((dn,d)=>`<button class="chip${d===wd(todayISO())?" sel":""}" data-pj="${d}" aria-label="${DAYS[d]}">${dn}</button>`).join("")}</div>`;
+  const sg=x=>(x>=0?"+":"−")+Math.abs(x);
   DAYS.forEach((dn,d)=>{const row=S.plan.days[d].filter(validItem),s=sumItems(row),t=targetFor(!!S.body.train.days[d]),dk=s.k-t.k,dp=s.p-t.p;
-    h+=`<section class="card day"><div class="row between" style="padding-top:8px"><h3>${dn}${S.body.train.days[d]?' <span class="chip on" style="padding:2px 8px">Προπόνηση</span>':""}</h3>
-      <span class="tot">${r0(s.k)} (${dk>=0?"+":""}${r0(dk)}) · <b>${r1(s.p)}</b> (${dp>=0?"+":""}${r0(dp)})</span></div>`;
+    h+=`<section class="card day" id="pd-${d}"><div class="row between" style="padding-top:8px"><h3>${dn}${S.body.train.days[d]?' <span class="chip on" style="padding:2px 8px">Προπόνηση</span>':""}</h3>
+      <span class="tot mx" title="Διαφορά από τον στόχο σε παρένθεση"><span class="k"><i>kcal</i>${r0(s.k)} <span class="muted">(${sg(r0(dk))})</span></span><span class="p"><i>P</i>${r1(s.p)} <span class="muted">(${sg(r0(dp))})</span></span></span></div>`;
     SLOTS.forEach((sl,i)=>{const its=row.filter(x=>x.slot===i),ss=sumItems(its);
       h+=`<div class="slot"><div class="slot-head"><span class="t">${sl.n} <span class="muted small" style="font-weight:500">${sl.t}</span></span>
         <span class="s">${its.length>1?MXn(ss):its.length?"":"—"}</span><button class="plus" data-padd="${d}:${i}" aria-label="Προσθήκη στο ${dn} ${sl.n}">+</button></div>`;
@@ -840,6 +858,7 @@ function renderPlan(){
       h+=`</div>`});
     h+=`</section>`});
   main.innerHTML=h;bindPlanSeg();
+  main.querySelectorAll("[data-pj]").forEach(b=>b.onclick=()=>{const el=byId("pd-"+b.dataset.pj),hh=document.querySelector("header.top")?.offsetHeight||0;scrollTo({top:Math.max(0,el.getBoundingClientRect().top+scrollY-hh-8),behavior:"smooth"})});
   main.querySelectorAll("[data-padd]").forEach(b=>b.onclick=()=>{const [d,i]=b.dataset.padd.split(":").map(Number);TG=planTG(d);openAddSheet(i)});
   main.querySelectorAll("[data-pedit]").forEach(b=>b.onclick=()=>{const [d,id]=b.dataset.pedit.split(":");TG=planTG(+d);openItemSheet(id)})}
 function bindPlanSeg(){byId("sub-plan").onclick=()=>{S.sub="plan";render()};byId("sub-shop").onclick=async()=>{S.sub="shop";render();
@@ -886,13 +905,13 @@ function renderFoods(){
   const meals=S.lib.meals.filter(m=>!ql||m.name.toLowerCase().includes(ql)).sort(byName);
   let h=`<div class="seg"><button id="fs-ing" class="${rec?"":"on"}">Υλικά (${S.lib.foods.length})</button><button id="fs-rec" class="${rec?"on":""}">Συνταγές (${S.lib.meals.length})</button></div>
   <input id="fq" placeholder="${rec?"Αναζήτηση συνταγής":"Αναζήτηση υλικού"}" value="${esc(S.foodQ)}" autocomplete="off">`;
-  if(!rec)h+=`<section class="card" style="gap:4px"><div class="row between"><h3>Υλικά</h3><div class="row"><button class="btn sm" id="labelScan">Barcode</button><button class="btn sm primary" id="newFood">+ Νέο</button></div></div>
-  <div class="list">${CATS.map(c=>{const g=foods.filter(f=>(CATS.includes(f.cat)?f.cat:"Άλλα")===c);return g.length?`<span class="label" style="margin-top:8px">${esc(c)} (${g.length})</span>`+g.map(f=>`<div class="li"><span class="n">${esc(f.name)}${srcTag(f)}</span>
-   <span class="v">${MX(f.kcal,f.p,f.c??0,f.f??0)}<br><span class="muted">ανά ${esc(unitTxt(f))}${f.u==="g"&&hasSv(f)?" · "+esc(svInfo(f)):""}</span></span><button class="btn sm" data-ef="${f.id}">Επεξ.</button></div>`).join(""):""}).join("")||'<span class="note">Κανένα.</span>'}</div>
+  if(!rec)h+=`<section class="card" style="gap:4px"><div class="row between"><h3>Υλικά <span class="small muted" style="font-weight:500">ανά 100 γρ.</span></h3><div class="row"><button class="btn sm" id="labelScan">Barcode</button><button class="btn sm primary" id="newFood">+ Νέο</button></div></div>
+  <div class="list">${CATS.map(c=>{const g=foods.filter(f=>(CATS.includes(f.cat)?f.cat:"Άλλα")===c);return g.length?`<span class="label" style="margin-top:8px">${esc(c)} (${g.length})</span>`+g.map(f=>`<button class="li" data-ef="${f.id}"><span class="n">${esc(f.name)}${srcTag(f)}</span>
+   <span class="v">${MX(f.kcal,f.p,f.c??0,f.f??0)}${f.u!=="g"?`<br><span class="muted">ανά ${esc(unitTxt(f))}</span>`:hasSv(f)?`<br><span class="muted">${esc(svInfo(f))}</span>`:""}</span><span class="chev" aria-hidden="true">›</span></button>`).join(""):""}).join("")||'<span class="note">Κανένα.</span>'}</div>
    <p class="note">kcal = θερμίδες, <span class="pr">P = πρωτεΐνη</span>, <span style="color:var(--carb)">C = υδατάνθρακες</span>, <span style="color:var(--fat)">F = λιπαρά</span>. <span class="tag bc">barcode</span> τιμές από τη συσκευασία, <span class="tag est">εκτίμηση</span> συνηθισμένες τιμές που έβαλα εγώ (διόρθωσέ τες από τη συσκευασία), <span class="tag ok">✓</span> ελεγμένες τιμές.</p></section>`;
   else h+=`<section class="card" style="gap:4px"><div class="row between"><h3>Συνταγές</h3><button class="btn sm primary" id="newMeal">+ Νέα συνταγή</button></div>
-  <div class="list">${meals.map(m=>{const n=mealNutr(m),sv=servOf(m);return `<div class="li"><span class="n">${esc(m.name)}</span>
-   <span class="v">${MXn(n)}<br><span class="muted">${sv>1?"ανά μερίδα ("+sv+")":"ανά μερίδα"}</span></span><button class="btn sm" data-em="${m.id}">Επεξ.</button></div>`}).join("")||'<span class="note">Καμία.</span>'}</div>
+  <div class="list">${meals.map(m=>{const n=mealNutr(m),sv=servOf(m);return `<button class="li" data-em="${m.id}"><span class="n">${esc(m.name)}</span>
+   <span class="v">${MXn(n)}${sv>1?`<br><span class="muted">ανά μερίδα (${sv})</span>`:""}</span><span class="chev" aria-hidden="true">›</span></button>`}).join("")||'<span class="note">Καμία.</span>'}</div>
    <p class="note">Φτιάξε συνταγή από τα υλικά σου· οι τιμές βγαίνουν μόνες τους. Στο πρόγραμμα διαλέγεις συνταγή ή μεμονωμένο υλικό.</p></section>`;
   main.innerHTML=h;
   byId("fs-ing").onclick=()=>{S.foodSub="ing";S.foodQ="";renderFoods()};byId("fs-rec").onclick=()=>{S.foodSub="rec";S.foodQ="";renderFoods()};
@@ -915,7 +934,7 @@ function editFood(id){
    <span class="label">Τιμές ανά 100 γρ.</span>
    <div class="form">${KS.map(([i,k,l])=>`<label class="field"><span>${l}</span><input id="${i}" type="number" inputmode="decimal" value="${per(k,g0)}"></label>`).join("")}</div>
    ${svToggleHTML("f",pc||hasSv(f),pc?svName(f):(f.sn||""),g0||"",pc)}
-   <div class="row"><button class="btn primary" id="ok">Αποθήκευση</button>${id?'<button class="btn danger" id="del">Διαγραφή</button>':""}</div><div id="delc"></div>`,()=>{
+   <div class="acts"><button class="btn primary" id="ok">Αποθήκευση</button>${id?'<button class="btn danger" id="del">Διαγραφή</button>':""}</div><div id="delc"></div>`,()=>{
    bindCats();bindSvToggle("f");byId("x").onclick=closeSheet;
    if(pc){const touched=new Set();KS.forEach(([i])=>byId(i).addEventListener("input",()=>touched.add(i)));
      byId("f-sg").oninput=()=>{const g=num(byId("f-sg").value);KS.forEach(([i,k])=>{if(!touched.has(i))byId(i).value=per(k,g)})}}
@@ -954,7 +973,7 @@ function editMeal(id){
      <select id="addPart"><option value="">+ Πρόσθεσε υλικό…</option>${[...S.lib.foods].sort(byName).map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join("")}</select>
      <div class="tot" id="mtot">${servOf(m)>1?"Ανά μερίδα":"Σύνολο"}: ${nv(n)}</div>
      <div class="field"><span>Ταιριάζει για</span><div class="row">${SLOTS.map((s,i)=>`<label class="chip"><input type="checkbox" id="ms-${i}" data-ms="${i}" ${m.s?.includes(i)?"checked":""}> ${s.n} ${s.t}</label>`).join("")}</div></div>
-     <div class="row"><button class="btn primary" id="ok">Αποθήκευση</button>${id?'<button class="btn danger" id="del">Διαγραφή</button>':""}</div><div id="delc"></div>`,bind)};
+     <div class="acts"><button class="btn primary" id="ok">Αποθήκευση</button>${id?'<button class="btn danger" id="del">Διαγραφή</button>':""}</div><div id="delc"></div>`,bind)};
   const grab=()=>{m.name=byId("mn").value;m.n=Math.max(1,Math.round(+byId("mserv").value||1));
     document.querySelectorAll("[data-pq]").forEach(i=>{const pt=list()[+i.dataset.pq],f=food(pt.food),v=num(i.value);pt.qty=!f?v:puOf(pt)==="sv"?fromSv(f,v):fromG(f,v)});
     m.s=[...document.querySelectorAll("[data-ms]")].filter(c=>c.checked).map(c=>+c.dataset.ms)};
@@ -1079,10 +1098,10 @@ function nutriHistHTML(){
   h+=`<p class="note">«Στον στόχο» = θερμίδες ±10% και πρωτεΐνη τουλάχιστον 95%. Οι μέρες που δεν άλλαξες μετράνε όπως το πρόγραμμα. Μετράει από ${fmtD(start)}, την πρώτη μέρα που χρησιμοποίησες την εφαρμογή.</p>`;
   return h}
 function weeksChart(wk){
-  const W=640,H=190,L=44,R=12,T=18,B=34,n=wk.length,bw=Math.min(46,(W-L-R)/n*.6);
+  const W=360,H=170,L=36,R=8,T=12,B=34,n=wk.length,bw=Math.min(30,(W-L-R)/n*.6);
   const mx=Math.max(...wk.map(x=>Math.max(x.k,x.tk)))*1.12,y=v=>T+(1-v/mx)*(H-T-B),x=i=>L+(i+.5)*(W-L-R)/n;
   const ticks=[0,mx/2,mx].map(v=>Math.round(v/100)*100);
-  return `<div class="chart"><div class="row between"><span class="label">Μέσες θερμίδες / μέρα ανά εβδομάδα</span><span class="small muted">― στόχος</span></div>
+  return `<div class="chart"><div class="row between"><span class="label">Μέσες θερμίδες / μέρα ανά εβδομάδα</span><span class="small muted"><span style="color:var(--prot);font-weight:800">―</span> στόχος</span></div>
   <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Μέσες θερμίδες ανά εβδομάδα">
   ${ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}</text>`).join("")}
   ${wk.map((w,i)=>`<rect x="${x(i)-bw/2}" y="${y(w.k)}" width="${bw}" height="${H-B-y(w.k)}" rx="4" fill="${w.k>w.tk*1.1?"var(--warn)":"var(--ink)"}"/>
@@ -1092,7 +1111,7 @@ function weeksChart(wk){
   </svg></div>`}
 function weightChart(hist){
   const pts=hist.filter(e=>e.weight);if(pts.length<2)return `<p class="note">Το γράφημα βάρους εμφανίζεται από τη 2η μέτρηση.</p>`;
-  const W=640,H=190,L=44,R=16,T=14,B=28;
+  const W=360,H=160,L=34,R=10,T=10,B=24;
   const t0=+parseISO(pts[0].date),t1=+parseISO(pts[pts.length-1].date);
   let lo=Math.min(...pts.map(p=>p.weight)),hi=Math.max(...pts.map(p=>p.weight));if(hi-lo<2){lo-=1;hi+=1}lo=Math.floor(lo);hi=Math.ceil(hi);
   const x=t=>L+(t1===t0?0:(t-t0)/(t1-t0))*(W-L-R),y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
@@ -1202,7 +1221,7 @@ function spark(vs){vs=vs.filter(v=>v!=null).slice(-10);if(vs.length<2)return `<s
   const W=64,H=22,lo=Math.min(...vs),hi=Math.max(...vs),y=v=>hi===lo?H/2:2+(hi-v)/(hi-lo)*(H-4),x=i=>2+i*(W-4)/(vs.length-1);
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${vs.map((v,i)=>x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ")}" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${x(vs.length-1)}" cy="${y(vs[vs.length-1])}" r="2.4" fill="var(--prot)"/></svg>`}
 function lineChart(pts,label,unit){if(pts.length<2)return `<p class="note">Το γράφημα εμφανίζεται από τη 2η φορά.</p>`;
-  const W=640,H=180,L=44,R=16,T=14,B=28,t0=+parseISO(pts[0].d),t1=+parseISO(pts[pts.length-1].d);
+  const W=360,H=150,L=40,R=10,T=10,B=24,t0=+parseISO(pts[0].d),t1=+parseISO(pts[pts.length-1].d);
   let lo=Math.min(...pts.map(p=>p.v)),hi=Math.max(...pts.map(p=>p.v));if(hi-lo<2){lo-=1;hi+=1}lo=Math.floor(lo);hi=Math.ceil(hi);
   const x=t=>L+(t1===t0?0:(t-t0)/(t1-t0))*(W-L-R),y=v=>T+(hi-v)/(hi-lo)*(H-T-B),step=Math.max(1,Math.ceil((hi-lo)/4)),ticks=[];for(let v=lo;v<=hi;v+=step)ticks.push(v);
   const first=pts[0],last=pts[pts.length-1],diff=r1(last.v-first.v);
@@ -1401,6 +1420,7 @@ function renderGymEdit(){
 let tt;function toast(m){clearTimeout(tt);let el=byId("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=m;el.hidden=false;tt=setTimeout(()=>el.hidden=true,1800)}
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{if(b.dataset.tab==="gym"&&S.tab==="gym")S.gymOpen=null;S.tab=b.dataset.tab;closeSheet();window.scrollTo(0,0);render()});
 byId("gear").onclick=openSettings;
+document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!byId("scrim"))return;const x=byId("sheetRoot").querySelector("#x,#exClose,#cancel,#imC");x?x.click():closeSheet()});
 boot();
 if("serviceWorker" in navigator){
   // Νέα έκδοση: όταν αναλάβει νέο service worker, ξαναφορτώνει μία φορά· ελέγχει για ενημέρωση κάθε φορά που ανοίγει η εφαρμογή
