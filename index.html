@@ -244,7 +244,16 @@ nav.tabs button.on{color:var(--ink)}
 .gbar.flash{animation:gflash 1.4s ease-out}
 @keyframes gflash{0%,40%{background:var(--prot-soft)}100%{background:transparent}}
 .gset{display:grid;grid-template-columns:18px minmax(0,78px) auto minmax(0,64px) auto auto;gap:6px;align-items:center;justify-content:start}
-.gset .sn{font-size:12px;color:var(--muted);font-weight:700;text-align:center}
+.gset .sn{font-size:12px;color:var(--muted);font-weight:700;text-align:center;border:0;background:transparent;padding:0}
+.gset.dr .sn{font-size:14px}
+/* σούπερ σετ: ενωμένες κάρτες με γραμμή αριστερά και A1/A2 */
+.ssb{flex:none;font-size:11px;font-weight:800;line-height:1;border-radius:6px;padding:3px 5px;background:var(--ink);color:var(--bg)}
+.card.gex.ssn,.card.gex.ssp{border-left:3px solid var(--ink);padding-left:8px}
+.card.gex.ssn{border-bottom-left-radius:4px;border-bottom-right-radius:4px}
+.card.gex.ssp{border-top-left-radius:4px;border-top-right-radius:4px;margin-top:-9px}
+.gx-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gx-f .ssbtn{margin-left:auto;display:inline-flex;align-items:center;gap:5px}.ssbtn svg{width:14px;height:14px}
+.ssbtn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .gset input{padding:6px 8px;text-align:center;font-weight:700;font-size:16px}
 .gset input::placeholder{color:var(--muted);opacity:.55;font-weight:500}
 .gset .x{font-size:12px;color:var(--muted)}
@@ -277,7 +286,7 @@ nav.tabs button.on{color:var(--ink)}
 /* ---------- Αρχικά δεδομένα (από το αρχείο Numbers) ---------- */
 // Έκδοση: ίδιο νούμερο με το C στο sw.js. Η ώρα δεν γράφεται με το χέρι: είναι η ώρα που ανέβηκε το index.html
 // στο GitHub Pages (κεφαλίδα Last-Modified της απάντησης που φυλάει το service worker), σε ώρα της συσκευής.
-const APP_VER={v:"v37",at:""};
+const APP_VER={v:"v38",at:""};
 // Χωρίς ζουμ (pinch / double-tap), και στο iOS που αγνοεί το user-scalable=no
 (()=>{const no=e=>e.preventDefault();
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,no,{passive:false}));
@@ -1147,7 +1156,11 @@ async function loadGym(){
 function saveGym(d){save("gym:"+d,S.gym[d])}
 const repN=r=>typeof r==="number"?r:0;
 function setTxt(st,m){if(m==="t")return st.s!=null?st.s+"″":"—";const r=st.r==null?"—":st.r;return m==="bw"||st.w==null?String(r):kg(st.w)+"×"+r}
-const setsTxt=e=>e.sets.map(s=>setTxt(s,e.m||"w")).join(" · ");
+const setsTxt=e=>e.sets.map((s,k)=>(k?(s.dr?" ↓":" · "):"")+setTxt(s,e.m||"w")).join("");
+const mainSets=e=>e.sets.filter(s=>!s.dr).length; // τα drop δεν μετράνε ως ξεχωριστά σετ
+const dropW=w=>w==null?null:Math.max(0,Math.round(w*.8/2.5)*2.5); // drop: ~20% λιγότερα κιλά, στρογγυλά στα 2,5
+// αντίγραφο άσκησης για νέα προπόνηση: ίδια κιλά, κενές επαναλήψεις, κρατάει drop και σούπερ σετ
+const exCopy=(e,link)=>({n:e.n,m:e.m||"w",...(link&&e.ss?{ss:true}:{}),sets:e.sets.map(x=>({w:x.w,r:null,s:null,...(x.dr?{dr:true}:{})}))});
 function exStat(e){const m=e.m||"w",ok=e.sets.filter(s=>m==="t"?s.s!=null:s.r!=null);if(!ok.length)return null;
   if(m==="t"){const v=Math.max(...ok.map(s=>s.s));return{m,v,cmp:v,txt:v+"″",unit:"δευτ."}}
   const ws=ok.filter(s=>s.w!=null);
@@ -1210,7 +1223,7 @@ function renderGym(){
   else{
     h+=`<section class="card">${gymStatsHTML()}</section>`;
     if(!ds.length)h+=`<section class="card"><p class="note">Δεν υπάρχει προπόνηση ακόμα. Πάτα «+ Νέα» για να γράψεις τη σημερινή, ή «Από σημειώσεις» για να επικολλήσεις όσα κρατάς στο κινητό.</p></section>`;
-    else h+=`<section class="card" style="gap:0;padding-block:4px"><div class="list">${ds.map(d=>{const g=S.gym[d],n=g.ex.reduce((a,e)=>a+e.sets.length,0);
+    else h+=`<section class="card" style="gap:0;padding-block:4px"><div class="list">${ds.map(d=>{const g=S.gym[d],n=g.ex.reduce((a,e)=>a+mainSets(e),0);
       return `<button class="gli" data-gopen="${d}"><span class="n"><b>${DSH[wd(d)]} ${fmtD(d)}</b>${g.title?" · "+esc(g.title):""}</span><span class="small muted">${g.ex.length} ασκ. · ${n} σετ${g.t0&&!g.t1?" · τώρα":g.t0&&g.t1>g.t0?" · "+durTxt(g.t1-g.t0):""}</span></button>`}).join("")}</div></section>`}
   main.innerHTML=h;
   byId("gs-list").onclick=()=>{S.gymSub="list";render()};byId("gs-prog").onclick=()=>{S.gymSub="prog";render()};
@@ -1252,7 +1265,7 @@ function openNewGym(){
     const go=tpl=>{const d=byId("ngD").value||todayISO();
       if(gymOn(d)){closeSheet();S.gymOpen=d;render();toast("Υπάρχει ήδη προπόνηση εκείνη τη μέρα");return}
       const src=tpl&&S.gym[tpl];
-      S.gym[d]={title:src?src.title:"",ex:src?src.ex.map(e=>({n:e.n,m:e.m||"w",sets:e.sets.map(s=>({w:s.w,r:null,s:null}))})):[]};
+      S.gym[d]={title:src?src.title:"",ex:src?src.ex.map(e=>exCopy(e,true)):[]};
       if(d===todayISO())gymStart(d);else saveGym(d);S.gymOpen=d;closeSheet();window.scrollTo(0,0);render()};
     const bind=()=>byId("ngT")&&byId("ngT").querySelectorAll("[data-tpl]").forEach(b=>b.onclick=()=>go(b.dataset.tpl));bind();
     byId("ngD").onchange=e=>{if(byId("ngT")){byId("ngT").innerHTML=list(e.target.value||todayISO());bind()}};
@@ -1354,28 +1367,37 @@ function renderGymEdit(){
     :today?'<button class="btn sm" id="gGo">▶ Χρονόμετρο</button>':"";
   let h=`<div class="row between"><button class="btn sm" id="gBack">‹ Όλες</button><div class="row" style="gap:6px">${tm}<input type="date" id="gDate" value="${d}" style="width:auto;padding:5px 8px"></div></div>
     <input class="gtitle" id="gTitle" value="${esc(g.title)}" placeholder="Τίτλος, π.χ. Legs & Abs">`;
+  // σούπερ σετ: ex.ss = ενωμένη με την επόμενη άσκηση. Ομάδες A, B, … και θέση 1, 2, …
+  const lk=i=>!!(g.ex[i]&&g.ex[i].ss&&g.ex[i+1]),grp=[];let gl=-1,gp=0;
+  g.ex.forEach((e,i)=>{if(lk(i-1))grp[i]=String.fromCharCode(65+gl)+(++gp);else if(lk(i)){gl++;gp=1;grp[i]=String.fromCharCode(65+gl)+"1"}else grp[i]=""});
   g.ex.forEach((e,i)=>{const m=e.m||"w",pv=prevEx(exKey(e.n),d),ps=pv?pv.e.sets:[],st=exStat(e);
     const best=exHistory(exKey(e.n)).filter(o=>o.d<d).reduce((a,o)=>Math.max(a,o.st.cmp),0),pr=st&&best>0&&st.cmp>best+.01;
-    h+=`<section class="card gex" data-gi="${i}"><div class="gx-h"><span class="gx-g" data-xg="${i}" aria-label="Σύρε για αλλαγή σειράς" title="Σύρε για αλλαγή σειράς"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span><textarea class="gx-n" data-xn="${i}" rows="1" aria-label="Όνομα άσκησης">${esc(e.n)}</textarea>
+    h+=`<section class="card gex${lk(i)?" ssn":""}${lk(i-1)?" ssp":""}" data-gi="${i}"><div class="gx-h"><span class="gx-g" data-xg="${i}" aria-label="Σύρε για αλλαγή σειράς" title="Σύρε για αλλαγή σειράς"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>${grp[i]?`<span class="ssb" title="Σούπερ σετ">${grp[i]}</span>`:""}<textarea class="gx-n" data-xn="${i}" rows="1" aria-label="Όνομα άσκησης">${esc(e.n)}</textarea>
       ${pr?`<span class="chip on">ρεκόρ</span>`:""}<select data-xm="${i}" aria-label="Τύπος">${[["w","Kg"],["bw","χωρίς βάρος"],["t","χρόνος"]].map(([v,l])=>`<option value="${v}" ${m===v?"selected":""}>${l}</option>`).join("")}</select>
       <button class="btn ghost sm" data-xdel="${i}" aria-label="Διαγραφή άσκησης" title="Διαγραφή άσκησης"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>
       ${pv?`<div class="gprev">Προηγ. ${fmtD(pv.d)}: ${esc(setsTxt(pv.e))}</div>`:""}`;
-    e.sets.forEach((s,j)=>{const p=ps[j]||{},k=i+"."+j;
-      h+=`<div class="gset"><span class="sn">${j+1}</span>`;
+    let no=0;
+    e.sets.forEach((s,j)=>{const p=ps[j]||{},k=i+"."+j,dr=!!s.dr&&j>0;if(!dr)no++;
+      // πάτα τον αριθμό του σετ (από το 2ο και μετά) για να γίνει drop του προηγούμενου, και ξανά για να γυρίσει
+      const sn=dr?"↓":no;
+      h+=`<div class="gset${dr?" dr":""}">${m==="w"&&j>0?`<button class="sn" data-sdr="${k}" aria-label="${dr?"Drop set: πάτα για κανονικό σετ":"Σετ "+sn+": πάτα για drop set"}">${sn}</button>`:`<span class="sn">${sn}</span>`}`;
       if(m==="w")h+=`<input data-sw="${k}" inputmode="decimal" value="${s.w!=null?kg(s.w):""}" placeholder="${p.w!=null?kg(p.w):"Kg"}"><span class="x">Kg ×</span>`;
       if(m==="t")h+=`<input data-ss="${k}" inputmode="numeric" value="${s.s??""}" placeholder="${p.s??"δευτ."}"><span class="x">δευτ.</span>`;
-      else h+=`<input data-sr="${k}" inputmode="numeric" value="${s.r??""}" placeholder="${p.r??""}"><span class="x">επαν.</span>${m==="bw"?`<button class="btn ghost sm" data-smax="${k}">max</button>`:""}`;
+      else h+=`<input data-sr="${k}" inputmode="numeric" value="${s.r??""}" placeholder="${p.r??""}"><span class="x">επαν.</span>${m==="bw"?`<button class="btn ghost sm" data-smax="${k}">max</button>`:dr?'<span class="tag">drop</span>':""}`;
       h+=`</div>`});
-    h+=`<div class="row"><button class="btn sm" data-sadd="${i}">+ Σετ</button>${e.sets.length?`<button class="btn sm" data-sdel="${i}">− Σετ</button>`:""}</div></section>`});
+    h+=`<div class="gx-f"><button class="btn sm" data-sadd="${i}">+ Σετ</button>${e.sets.length?`<button class="btn sm" data-sdel="${i}">− Σετ</button>`:""}${m==="w"&&e.sets.length?`<button class="btn sm" data-sdrop="${i}" title="Συνέχεια του τελευταίου σετ με λιγότερα κιλά">+ Drop</button>`:""}${i<g.ex.length-1?`<button class="btn sm ssbtn${lk(i)?" on":""}" data-xss="${i}" aria-pressed="${lk(i)}" title="Σούπερ σετ με την επόμενη άσκηση"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Σούπερ σετ</button>`:""}</div></section>`});
   h+=`<section class="card"><div class="row"><input id="gxNew" list="gxList" placeholder="Νέα άσκηση" class="grow" autocomplete="off"><button class="btn sm primary" id="gxAdd">+ Άσκηση</button></div>
     <datalist id="gxList">${[...known].sort(byName).map(x=>`<option value="${esc(x.n)}">`).join("")}</datalist></section>
     <button class="btn danger sm" id="gDel" style="align-self:flex-start">Διαγραφή προπόνησης</button>`;
   main.innerHTML=h;
   const sv=()=>saveGym(d),ij=a=>a.split(".").map(Number);
   // Καταγραφή σετ σήμερα: ξεκινάει το χρονόμετρο (αν δεν τρέχει ήδη) και το διάλειμμα. Όχι μετά το «Τέλος» ή σε άλλη μέρα.
-  const setDone=v=>{if(!today||v==null||v===""||g.t1)return;
+  const setDone=(v,i,j)=>{if(!today||v==null||v===""||g.t1)return;
     if(!g.t0){gymStart(d);const b=byId("gGo");if(b)b.remove()} // χωρίς render: μένει ανοιχτό το πληκτρολόγιο
-    g.ta=Date.now();sv();restStart()};
+    g.ta=Date.now();sv();
+    // ακολουθεί drop set ή η επόμενη άσκηση του σούπερ σετ: συνεχίζεις χωρίς διάλειμμα
+    const nx=g.ex[i].sets[j+1];if((nx&&nx.dr)||lk(i)){if(TM.rest)restStop();return}
+    restStart()};
   byId("gBack").onclick=()=>{S.gymOpen=null;render()};
   const gGo=byId("gGo");if(gGo)gGo.onclick=()=>{unlockAudio();gymStart(d);render()};
   byId("gTitle").oninput=e=>{g.title=e.target.value.trim();sv()};
@@ -1401,18 +1423,23 @@ function renderGymEdit(){
     const mv=e=>{if(e.pointerId===ev.pointerId){y=e.clientY;place()}},
       end=e=>{if(e.pointerId!==ev.pointerId)return;cancelAnimationFrame(raf);removeEventListener("pointermove",mv);removeEventListener("pointerup",end);removeEventListener("pointercancel",end);
       const ord=[...main.querySelectorAll(".gex")].map(c=>+c.dataset.gi);card.classList.remove("drag");card.style.transform="";
-      if(ord.some((v,k)=>v!==k)){g.ex=ord.map(k=>g.ex[k]);sv()}render()};
+      if(ord.some((v,k)=>v!==k)){const nx=new Map(g.ex.map((x,k)=>[x,g.ex[k+1]]));g.ex=ord.map(k=>g.ex[k]);
+        g.ex.forEach((x,k)=>{if(x.ss&&g.ex[k+1]!==nx.get(x))delete x.ss});sv()}render()};
     addEventListener("pointermove",mv);addEventListener("pointerup",end);addEventListener("pointercancel",end)});
   main.querySelectorAll("[data-xm]").forEach(el=>el.oninput=()=>{g.ex[+el.dataset.xm].m=el.value;sv();render()});
-  main.querySelectorAll("[data-xdel]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.xdel];if(e.sets.some(s=>s.r!=null||s.s!=null)&&!confirm("Διαγραφή της άσκησης «"+e.n+"»;"))return;g.ex.splice(+b.dataset.xdel,1);sv();render()});
+  main.querySelectorAll("[data-xdel]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.xdel];if(e.sets.some(s=>s.r!=null||s.s!=null)&&!confirm("Διαγραφή της άσκησης «"+e.n+"»;"))return;
+    const ix=+b.dataset.xdel,pe=g.ex[ix-1];if(pe&&pe.ss&&!e.ss)delete pe.ss;g.ex.splice(ix,1);sv();render()});
+  main.querySelectorAll("[data-xss]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.xss];if(e.ss)delete e.ss;else e.ss=true;sv();render()});
+  main.querySelectorAll("[data-sdr]").forEach(b=>b.onclick=()=>{const [i,j]=ij(b.dataset.sdr),st=g.ex[i].sets[j];if(st.dr)delete st.dr;else st.dr=true;sv();render()});
+  main.querySelectorAll("[data-sdrop]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.sdrop],l=e.sets[e.sets.length-1];e.sets.push({w:dropW(l&&l.w),r:null,s:null,dr:true});sv();render()});
   main.querySelectorAll("[data-sw]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sw);g.ex[i].sets[j].w=pnum(el.value);sv()});
-  main.querySelectorAll("[data-sr]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sr),v=el.value.trim().toLowerCase(),n=pnum(v);g.ex[i].sets[j].r=v==="max"?"max":n==null?null:Math.round(n);sv();setDone(g.ex[i].sets[j].r)});
-  main.querySelectorAll("[data-ss]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.ss),n=pnum(el.value);g.ex[i].sets[j].s=n==null?null:Math.round(n);sv();setDone(g.ex[i].sets[j].s)});
-  main.querySelectorAll("[data-smax]").forEach(b=>b.onclick=()=>{const [i,j]=ij(b.dataset.smax);g.ex[i].sets[j].r="max";sv();setDone("max");render()});
+  main.querySelectorAll("[data-sr]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.sr),v=el.value.trim().toLowerCase(),n=pnum(v);g.ex[i].sets[j].r=v==="max"?"max":n==null?null:Math.round(n);sv();setDone(g.ex[i].sets[j].r,i,j)});
+  main.querySelectorAll("[data-ss]").forEach(el=>el.oninput=()=>{const [i,j]=ij(el.dataset.ss),n=pnum(el.value);g.ex[i].sets[j].s=n==null?null:Math.round(n);sv();setDone(g.ex[i].sets[j].s,i,j)});
+  main.querySelectorAll("[data-smax]").forEach(b=>b.onclick=()=>{const [i,j]=ij(b.dataset.smax);g.ex[i].sets[j].r="max";sv();setDone("max",i,j);render()});
   main.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=()=>{g.ex[+b.dataset.sdel].sets.pop();sv();render()});
-  main.querySelectorAll("[data-sadd]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.sadd],l=e.sets[e.sets.length-1];e.sets.push({w:l?l.w:null,r:null,s:null});sv();render()});
+  main.querySelectorAll("[data-sadd]").forEach(b=>b.onclick=()=>{const e=g.ex[+b.dataset.sadd],l=[...e.sets].reverse().find(x=>!x.dr);e.sets.push({w:l?l.w:null,r:null,s:null});sv();render()});
   byId("gxAdd").onclick=()=>{const n=byId("gxNew").value.trim();if(!n)return;const pv=prevEx(exKey(n),d);
-    g.ex.push(pv?{n:pv.e.n,m:pv.e.m||"w",sets:pv.e.sets.map(s=>({w:s.w,r:null,s:null}))}:{n,m:"w",sets:[{w:null,r:null,s:null},{w:null,r:null,s:null},{w:null,r:null,s:null}]});sv();render()};
+    g.ex.push(pv?exCopy(pv.e,false):{n,m:"w",sets:[{w:null,r:null,s:null},{w:null,r:null,s:null},{w:null,r:null,s:null}]});sv();render()};
   byId("gxNew").onkeydown=e=>{if(e.key==="Enter")byId("gxAdd").click()};
   byId("gDel").onclick=()=>{if(!confirm("Διαγραφή της προπόνησης της "+fmtD(d)+";"))return;S.gym[d]={deleted:true};sv();S.gymOpen=null;render();toast("Η προπόνηση διαγράφηκε")}}
 
